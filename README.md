@@ -25,6 +25,10 @@ Ollama 로컬 모델 위에, 주요 에이전트 **논문의 기법을 단계적
 # CodeAct 에이전트 (권장 — 행동을 python 코드로, 가장 견고)
 python agent/codeact_agent.py "Create a bubble sort function and test it"
 
+# 다른 모델로 실행/벤치 (환경변수)
+AGENT_MODEL=gpt-oss:20b python agent/codeact_agent.py "..."
+AGENT_MODEL=gpt-oss:20b python agent/benchmark.py
+
 # 통합 에이전트 (커스텀 도구판)
 python agent/agent.py "Create a bubble sort function and test it"
 

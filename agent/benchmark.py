@@ -28,6 +28,13 @@ TASKS = [
     ("fibonacci",
      "Create fib(n) returning the nth Fibonacci number (fib(0)=0, fib(1)=1). Verify fib(10)==55 and fib(1)==1. If correct, print exactly BENCH_OK.",
      "BENCH_OK"),
+    # --- 난이도 상향 (변별력) ---
+    ("merge_sort",
+     "Create merge_sort(arr) using recursion (divide and merge). Verify merge_sort([5,2,8,1,9,3,7])==[1,2,3,5,7,8,9] and merge_sort([])==[]. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    ("lru_cache",
+     "Create an LRUCache class with __init__(capacity), get(key)->value or -1, put(key,value). Capacity 2: put(1,1); put(2,2); get(1)==1; put(3,3) evicts key 2; get(2)==-1; get(3)==3. If all correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
 ]
 
 
