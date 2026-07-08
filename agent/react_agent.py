@@ -4,6 +4,11 @@ Thought -> Action -> Observation 루프 + Ollama 로컬 모델 + 도구 3개.
 실행: python agent/react_agent.py "질문"
 """
 import json, sys, re, io, contextlib, urllib.request, urllib.parse
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except:
+    pass
+
 
 OLLAMA = "http://localhost:11434/api/chat"
 MODEL = "qwen3-coder-cline:30b"
