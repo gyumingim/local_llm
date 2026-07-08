@@ -30,11 +30,19 @@ def _web_search(query, k=3):
         return f"search error: {e}"
 
 
+def _load_skills():
+    return json.load(open(SKILLS_FILE, encoding="utf-8")) if os.path.exists(SKILLS_FILE) else {}
+
+
 def _save_skill(name, code):
-    skills = json.load(open(SKILLS_FILE, encoding="utf-8")) if os.path.exists(SKILLS_FILE) else {}
+    skills = _load_skills()
     skills[name] = code
     json.dump(skills, open(SKILLS_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
     return f"saved skill '{name}'"
+
+
+def _use_skill(name):
+    return _load_skills().get(name, f"skill '{name}' not found")
 
 
 SYSTEM = """You are a coding agent. You act ONLY by writing Python code.
@@ -52,6 +60,7 @@ Rules:
 Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG
 - save_skill(name, code_string) -> save reusable code for later
+- use_skill(name) -> retrieve a previously saved skill's code (reuse instead of rewriting)
 When the task is DONE and you verified it works, respond with NO code block:
 Thought: done
 FINAL: <one-line summary>
@@ -89,9 +98,12 @@ def execute(code, ns):
 
 def run(task, max_steps=15):
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
-    ns = {"__name__": "__agent__", "web_search": _web_search, "save_skill": _save_skill}
+    ns = {"__name__": "__agent__", "web_search": _web_search,
+          "save_skill": _save_skill, "use_skill": _use_skill}
+    _sk = _load_skills()
+    _hint = ("\nSaved skills available via use_skill(name): " + ", ".join(_sk)) if _sk else ""
     messages = [{"role": "system", "content": SYSTEM},
-                {"role": "user", "content": f"Task: {task}"}]
+                {"role": "user", "content": f"Task: {task}{_hint}"}]
     recent = []
     refined = False
     for step in range(max_steps):
