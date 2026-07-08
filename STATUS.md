@@ -89,7 +89,11 @@
 - [x] benchmark.py: 알고리즘 4종(factorial/palindrome/gcd/binary_search) 자동채점 → **4/4 (100%)** 통과
 - [x] SETUP.md: 다른 환경 재현 가이드
 - 커밋 6개 (Initial 제외 5개 작업 커밋)
-- 남은 개선(선택): Self-Refine, MemGPT context요약, ToT 다중경로
+- [x] Self-Refine(완료 전 자기검토 1회): 명시적 요구 검증엔 유효.
+  단, **로컬 30B는 self-critique가 약해 미묘한 엣지케이스(빈 입력 등) 자동개선은 제한적**
+  (프롬프트 강화해도 avg([]) 크래시 미인지 — Self-Refine 논문은 GPT-4 기준. 정직한 한계)
+- 남은 개선(선택): MemGPT context요약, ToT/LATS 트리탐색
+- 검증 요약: 벤치 4/4(100%) + 버그픽스·클래스·다중파일·웹서치·quicksort 전부 통과
 
 ## 접근 정보 (karma)
 - ssh: karma@karma (비번 1234) / plink -hostkey SHA256:/XUK2IGZJoYyBjrIC1O6oFffGLv+bB5APJbKGpehIao

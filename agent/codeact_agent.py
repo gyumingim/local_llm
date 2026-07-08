@@ -107,8 +107,8 @@ def run(task, max_steps=15):
             if not refined:  # Self-Refine(2303.17651): 완료 전 1회 자기검토
                 refined = True
                 messages.append({"role": "user", "content":
-                    "Self-review: check your code for correctness and edge cases. "
-                    "If it can be improved, fix it with a ```python block; otherwise reply 'FINAL: <summary>' again."})
+                    "Self-review: does your code handle edge cases — empty input, zero, negative numbers, boundaries? "
+                    "Could it crash on any valid input? If so, fix it with a ```python block; otherwise reply 'FINAL: <summary>'."})
                 continue
             return out.split("FINAL:")[-1].strip()
         code = extract_code(out)
