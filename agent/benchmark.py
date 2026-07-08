@@ -3,7 +3,7 @@
 회귀 테스트 + 품질 정량화용.
 실행: python agent/benchmark.py
 """
-import subprocess, sys, os
+import subprocess, sys, os, time
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 AGENT = os.path.join(BASE, "codeact_agent.py")
@@ -79,25 +79,29 @@ TASKS = [
 
 
 def run_task(task):
+    t0 = time.time()
     r = subprocess.run([sys.executable, AGENT, task], capture_output=True, text=True, timeout=300)
-    return r.stdout + r.stderr
+    out = r.stdout + r.stderr
+    steps = out.count("--- Step")
+    return out, steps, time.time() - t0
 
 
 def main():
     passed = 0
-    results = []
+    total_steps = total_time = 0
     for name, task, marker in TASKS:
         try:
-            out = run_task(task)
+            out, steps, dt = run_task(task)
             ok = marker in out
         except Exception as e:
-            ok, out = False, str(e)
-        results.append((name, ok))
-        print(f"[{'PASS' if ok else 'FAIL'}] {name}", flush=True)
+            ok, steps, dt = False, 0, 0.0
+        print(f"[{'PASS' if ok else 'FAIL'}] {name}  ({steps} steps, {dt:.0f}s)", flush=True)
         passed += ok
+        total_steps += steps
+        total_time += dt
     pct = 100 * passed // len(TASKS)
-    print(f"\n=== {passed}/{len(TASKS)} passed ({pct}%) ===")
-    return results
+    n = len(TASKS)
+    print(f"\n=== {passed}/{n} passed ({pct}%) | 평균 {total_steps/n:.1f} steps, {total_time/n:.0f}s/task ===")
 
 
 if __name__ == "__main__":
