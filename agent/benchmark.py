@@ -22,6 +22,12 @@ TASKS = [
     ("binary_search",
      "Create binary_search(arr, target) returning index or -1. On sorted [1,3,5,7,9]: 7 gives index 3, and 4 gives -1. If correct, print exactly BENCH_OK.",
      "BENCH_OK"),
+    ("fizzbuzz",
+     "Create fizzbuzz(n): 'Fizz' if divisible by 3, 'Buzz' if by 5, 'FizzBuzz' if by 15, else str(n). Verify fizzbuzz(15)=='FizzBuzz', fizzbuzz(9)=='Fizz', fizzbuzz(10)=='Buzz', fizzbuzz(7)=='7'. If all correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    ("fibonacci",
+     "Create fib(n) returning the nth Fibonacci number (fib(0)=0, fib(1)=1). Verify fib(10)==55 and fib(1)==1. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
 ]
 
 
