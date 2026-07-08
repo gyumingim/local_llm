@@ -46,7 +46,7 @@ def index_dir(root):
                     doc = ast.get_docstring(node) or ""
                     text = f"{node.name}\n{doc}\n{seg[:500]}"
                     items.append({"name": node.name, "file": os.path.relpath(path, root),
-                                  "line": node.lineno, "emb": embed(text)})
+                                  "line": node.lineno, "code": seg[:400], "emb": embed(text)})
                     print(f"  indexed {node.name}  ({os.path.relpath(path, root)}:{node.lineno})")
     json.dump(items, open(INDEX_FILE, "w", encoding="utf-8"), ensure_ascii=False)
     return len(items)
@@ -56,7 +56,7 @@ def search(query, k=3):
     items = json.load(open(INDEX_FILE, encoding="utf-8"))
     q = embed(query)
     scored = sorted(items, key=lambda x: cosine(q, x["emb"]), reverse=True)
-    return [(x["name"], x["file"], x["line"], round(cosine(q, x["emb"]), 3)) for x in scored[:k]]
+    return [(x["name"], x["file"], x["line"], round(cosine(q, x["emb"]), 3), x.get("code", "")) for x in scored[:k]]
 
 
 if __name__ == "__main__":
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         print(f"=== indexing {root} ===")
         print(f"indexed {index_dir(root)} functions/classes")
     elif len(sys.argv) > 1 and sys.argv[1] == "search":
-        for name, file, line, sim in search(" ".join(sys.argv[2:])):
+        for name, file, line, sim, code in search(" ".join(sys.argv[2:])):
             print(f"  {sim}  {name}  ({file}:{line})")
     else:
         print("usage: indexer.py index [dir] | search <query>")

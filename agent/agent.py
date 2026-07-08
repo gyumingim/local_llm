@@ -86,7 +86,7 @@ def tool_search_codebase(arg):
     try:
         from indexer import search as cb_search
         rows = cb_search(arg.strip())
-        return "\n".join(f"{n} ({f}:{ln}) sim={s}" for n, f, ln, s in rows) or "no matches"
+        return "\n---\n".join(f"{n} ({f}:{ln}) sim={s}\n{code}" for n, f, ln, s, code in rows) or "no matches"
     except Exception as e:
         return f"Error (run 'python agent/indexer.py index' first): {e}"
 
