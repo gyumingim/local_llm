@@ -86,9 +86,11 @@
 - [x] 실전교훈 반영: CodeAct 에이전트(codeact_agent.py) — 행동=python코드로 통일, 파싱지옥 해결
   (mini-swe-agent 100줄 74% / smolagents 분석). 검증: 버그픽스5·Stack4·다중파일CLI6·웹서치+quicksort
 - [x] web_search/save_skill 헬퍼 namespace 주입 + context압축 + 안전가드(rmtree/os.system 차단)
-- [x] benchmark.py: **16종 16/16 (100%)** — 단일파일15(알고리즘·파서·인터프리터·은행) + 멀티파일(import 조율)
-- [x] **강화 사이클2 (실패 기반)**: multifile FAIL 발견 → 원인 3개(여러 코드블록 누락 / sys.path에 workspace 없음 / exec import hang)
-      → 강화: extract_code 모든블록 추출 + sys.path.insert(WORKSPACE) + run_py 헬퍼(subprocess+timeout) → **16/16**
+- [x] benchmark.py: **18종 18/18 (100%)** — 단일파일15 + 멀티파일 + 플러그인시스템 + json표준라이브러리
+- [x] **강화 사이클2 (실패 기반)**: multifile FAIL → 원인 3개(여러 코드블록 누락 / sys.path에 workspace 없음 / exec import hang)
+      → 강화: extract_code 모든블록 추출 + sys.path.insert(WORKSPACE) + run_py 헬퍼(subprocess+timeout)
+- [x] **강화 사이클3**: 플러그인·stdlib 태스크 추가 → 전부 통과(18/18). **강화 후 로컬 30B가 자기완결적 태스크 사실상 다 감당**
+      → 진짜 한계는 SWE-bench식 대규모 실제 저장소(수십 파일·실제 프레임워크·긴 컨텍스트) — 별도 인프라 필요
 - [x] **강화 사이클(실패 기반)**: csv_parse timeout 발견 → 원인: exec에 timeout 없어 무한루프 hang + Self-Refine이 완료 방해
       → 강화 4종: exec threading timeout(25s) / Self-Refine 제거 / fail_streak(6회 조기종료) / strip 힌트
       → 결과: csv/debug/파서(expr,json) 전부 통과. **로컬 30B가 파서 구현까지 강함**
