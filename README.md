@@ -32,6 +32,9 @@ python agent/agent.py "Create a bubble sort function and test it"
 python agent/indexer.py index
 python agent/indexer.py search "function that runs a file safely"
 
+# 벤치마크 (에이전트 품질 측정 / 회귀 테스트)
+python agent/benchmark.py
+
 # 단계별 에이전트도 개별 실행 가능
 python agent/react_agent.py "질문"
 ```
