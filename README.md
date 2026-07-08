@@ -61,6 +61,15 @@ python agent/react_agent.py "질문"
 
 → 로컬 qwen3-coder 30B가 알고리즘·자료구조·기본 디버깅에 강함. 진짜 한계는 대규모 실제 저장소(SWE-bench식) — 별도 인프라 필요.
 
+## 강화 과정 (실패 기반 — 벤치로 실제 결함 발견 → 근본 수정)
+| # | 발견한 결함 | 근본 원인 | 강화 |
+|---|---|---|---|
+| 1 | csv_parse가 5분 timeout | exec에 timeout 없어 무한루프 hang + Self-Refine이 완료 방해 | exec threading timeout(25s) + Self-Refine 제거 + fail_streak |
+| 2 | multifile FAIL | 여러 코드블록 첫 것만 추출 / sys.path에 workspace 없음 / exec import hang | 모든 블록 추출 + sys.path.insert(WORKSPACE) + run_py 헬퍼(subprocess) |
+| 3 | 유니코드 입력 시 크래시 | Windows cp949 콘솔이 `—` 등 출력 불가 | sys.stdout.reconfigure(utf-8) |
+
+→ 억지 개선이 아니라 **벤치로 실제 결함을 찾아 근본 수정**. Self-Refine처럼 로컬 30B엔 해로운 것도 정직하게 제거.
+
 ## 진행 로드맵
 - [x] 1~5단계 + 통합 에이전트 (모두 자체검증 통과)
 - [ ] Self-Refine (Final Answer 전 자기검토) — 선택
