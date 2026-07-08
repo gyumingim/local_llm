@@ -93,6 +93,7 @@ def run(task, max_steps=15):
     messages = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": f"Task: {task}"}]
     recent = []
+    refined = False
     for step in range(max_steps):
         # context 압축 (mini-swe-agent 교훈): 오래된 observation을 잘라 context bloat 방지
         if len(messages) > 12:
@@ -103,6 +104,12 @@ def run(task, max_steps=15):
         print(f"\n--- Step {step+1} ---\n{out.strip()[:500]}")
         messages.append({"role": "assistant", "content": out})
         if "FINAL:" in out:
+            if not refined:  # Self-Refine(2303.17651): 완료 전 1회 자기검토
+                refined = True
+                messages.append({"role": "user", "content":
+                    "Self-review: check your code for correctness and edge cases. "
+                    "If it can be improved, fix it with a ```python block; otherwise reply 'FINAL: <summary>' again."})
+                continue
             return out.split("FINAL:")[-1].strip()
         code = extract_code(out)
         if not code:
