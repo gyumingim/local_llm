@@ -9,3 +9,8 @@ agent/skills.json
 
 # 임시
 *.log
+
+# 파인튜닝 실험 산출물 (기록은 .py만)
+finetune/ft_data.jsonl
+finetune/out/
+finetune/model_ft/

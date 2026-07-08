@@ -61,6 +61,9 @@
   - gpt-oss:120b: 17.6 tok/s (RAM 오프로드 심함) → 실사용 제외
 - flash attention + KV q8_0 적용(env User): 오프로드 34%→29%, SIZE 22→20GB (근본 한계는 weight 18GB > VRAM 16GB = 하드웨어)
 - **Kilo 최적 배치**: Code/Debug/Orchestrator=qwen3-coder-cline:30b, Ask/Plan=gpt-oss:20b
+- flash attention User env 영구 설정(재부팅 유지). 실사용 스택 완성: 모델+flash+Kilo(200)+SearXNG/Qdrant
+- 파인튜닝 실험 결론: **자기생성 데이터 파인튜닝은 성능↑ 비효율**(model collapse 위험 + 30B는 16GB로 불가). finetune/는 파이프라인 기록만
+- **최적 전략(결론)**: 일상=로컬(공짜·빠름, qwen3-coder 67tok/s) / 어려운 것=하이브리드(GLM $12.6mo or Claude). 로컬 5080으론 Claude급 지능 불가(하드웨어)
 
 ## 최종 스택 = Kilo Code 하나 + Ollama (Cline/Continue 제거)
 - Kilo Ollama 연결: Custom provider, OpenAI Compatible, http://localhost:11434/v1, qwen3-coder-cline:30b
