@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# 에이전트 런타임 산출물 (재생성 가능)
+agent/workspace/
+agent/code_index.json
+agent/skills.json
+
+# 임시
+*.log
