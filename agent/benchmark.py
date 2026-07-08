@@ -75,6 +75,10 @@ TASKS = [
     ("todo_app",
      "Build a TODO app across files: todo.py (Todo class: id, text, done=False); store.py (Store class: add(text) returns new id starting at 1, list() returns all todos, complete(id) sets done=True, delete(id) removes); main.py that adds 3 todos ('a','b','c'), completes id 2, deletes id 1, then prints the remaining todos. Use run_py('main.py'). Verify 2 todos remain (b done, c not). Print exactly BENCH_OK if correct.",
      "BENCH_OK"),
+    # --- 사이클5: SWE-bench식 멀티파일 디버깅 (실제 저장소 작업에 가장 근접) ---
+    ("multifile_debug",
+     "Create mathlib.py with a BUGGY function `def average(nums): return sum(nums) / len(nums) + 1` (the +1 is a bug), and main.py that imports mathlib and prints mathlib.average([2,4,6]). Use run_py('main.py') — it shows 5.0 which is WRONG (should be 4.0). Find and fix the bug in mathlib.py, re-run, and verify it prints 4.0. Print exactly BENCH_OK if fixed.",
+     "BENCH_OK"),
 ]
 
 
