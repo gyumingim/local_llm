@@ -45,6 +45,16 @@ def _use_skill(name):
     return _load_skills().get(name, f"skill '{name}' not found")
 
 
+def _run_py(path):
+    """파일 실행 전용 (subprocess+timeout) — exec의 import/hang 문제 우회. 멀티파일 실행에 사용."""
+    import subprocess
+    try:
+        r = subprocess.run([sys.executable, path], capture_output=True, text=True, timeout=30, cwd=WORKSPACE)
+        return (r.stdout + r.stderr).strip() or "(no output)"
+    except Exception as e:
+        return f"run error: {e}"
+
+
 SYSTEM = """You are a coding agent. You act ONLY by writing Python code.
 Each turn respond in this format:
 Thought: <short reasoning>
@@ -62,6 +72,7 @@ Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG
 - save_skill(name, code_string) -> save reusable code for later
 - use_skill(name) -> retrieve a previously saved skill's code (reuse instead of rewriting)
+- run_py(path) -> run a .py file in a subprocess and return its output. USE THIS to run/test files (esp. multi-file programs) instead of import.
 When the task is DONE and you verified it works, respond with NO code block:
 Thought: done
 FINAL: <one-line summary>
@@ -77,8 +88,9 @@ def call_ollama(messages):
 
 
 def extract_code(text):
-    m = re.search(r"```(?:python)?\s*\n(.*?)```", text, re.DOTALL)
-    return m.group(1) if m else None
+    # 한 응답에 여러 코드 블록이 있으면 모두 연결해 실행 (멀티파일 한 번에 작성 대응)
+    blocks = re.findall(r"```(?:python)?\s*\n(.*?)```", text, re.DOTALL)
+    return "\n".join(blocks) if blocks else None
 
 
 def execute(code, ns, timeout=25):
@@ -111,8 +123,10 @@ def is_failure(obs):
 
 def run(task, max_steps=15):
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
+    if WORKSPACE not in sys.path:
+        sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
     ns = {"__name__": "__agent__", "web_search": _web_search,
-          "save_skill": _save_skill, "use_skill": _use_skill}
+          "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py}
     _sk = _load_skills()
     _hint = ("\nSaved skills available via use_skill(name): " + ", ".join(_sk)) if _sk else ""
     messages = [{"role": "system", "content": SYSTEM},
