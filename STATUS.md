@@ -54,6 +54,14 @@
 4. Continue: @codebase 인덱싱 자동시작 확인
 5. 비전: Cline/Continue에 이미지 첨부해서 사용
 
+## 실사용 성능 최적화 (2026-07-09, 벤치 매몰 탈피 → 당장 쓸 AI 집중)
+- 실측(실무 코딩 프롬프트):
+  - qwen3-coder-cline:30b: **67 tok/s**(flash attention 후), 코딩특화·정확 → **에이전트 코딩 메인**
+  - gpt-oss:20b: **162 tok/s**, 빠르고 품질 준수 → **빠른 채팅/Ask·Plan**
+  - gpt-oss:120b: 17.6 tok/s (RAM 오프로드 심함) → 실사용 제외
+- flash attention + KV q8_0 적용(env User): 오프로드 34%→29%, SIZE 22→20GB (근본 한계는 weight 18GB > VRAM 16GB = 하드웨어)
+- **Kilo 최적 배치**: Code/Debug/Orchestrator=qwen3-coder-cline:30b, Ask/Plan=gpt-oss:20b
+
 ## 최종 스택 = Kilo Code 하나 + Ollama (Cline/Continue 제거)
 - Kilo Ollama 연결: Custom provider, OpenAI Compatible, http://localhost:11434/v1, qwen3-coder-cline:30b
 - [x] ② Rules: .kilocode/rules/00-principles.md (HARNESS 원칙 자동 적용)

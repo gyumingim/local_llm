@@ -53,10 +53,21 @@ def _run_py(path):
     """파일 실행 전용 (subprocess+timeout) — exec의 import/hang 문제 우회. 멀티파일 실행에 사용."""
     import subprocess
     try:
-        r = subprocess.run([sys.executable, path], capture_output=True, text=True, timeout=30, cwd=WORKSPACE)
+        r = subprocess.run([sys.executable, path], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=30, cwd=WORKSPACE)
         return (r.stdout + r.stderr).strip() or "(no output)"
     except Exception as e:
         return f"run error: {e}"
+
+
+def _search_codebase(query):
+    """실제 프로젝트 코드 의미검색(RAG, indexer) — 기존 코드베이스 이해용 (백지 작성과 다른 실무 능력)"""
+    try:
+        from indexer import search as _s
+        rows = _s(query)
+        return [{"name": n, "file": f, "line": ln, "code": c[:300]} for n, f, ln, sim, c in rows]
+    except Exception as e:
+        return f"search error (run 'python agent/indexer.py index' first): {e}"
 
 
 SYSTEM = """You are a coding agent. You act ONLY by writing Python code.
@@ -77,6 +88,7 @@ Helpers already available (call directly, no import needed):
 - save_skill(name, code_string) -> save reusable code for later
 - use_skill(name) -> retrieve a previously saved skill's code (reuse instead of rewriting)
 - run_py(path) -> run a .py file in a subprocess and return its output. USE THIS to run/test files (esp. multi-file programs) instead of import.
+- search_codebase(query) -> semantic search over the indexed project code; returns [{name,file,line,code}]. Use to understand existing code before modifying.
 When the task is DONE and you verified it works, respond with NO code block:
 Thought: done
 FINAL: <one-line summary>
@@ -130,7 +142,8 @@ def run(task, max_steps=15):
     if WORKSPACE not in sys.path:
         sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
     ns = {"__name__": "__agent__", "web_search": _web_search,
-          "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py}
+          "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py,
+          "search_codebase": _search_codebase}
     _sk = _load_skills()
     _hint = ("\nSaved skills available via use_skill(name): " + ", ".join(_sk)) if _sk else ""
     messages = [{"role": "system", "content": SYSTEM},
