@@ -5,7 +5,6 @@ ReAct 루프 + 안전한 코드편집 도구셋. workspace/ 안에서만 작업(
 """
 import json, sys, re, os, subprocess, urllib.request
 try:
-    import sys
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 except:
     pass
