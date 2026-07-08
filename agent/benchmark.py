@@ -60,6 +60,10 @@ TASKS = [
     ("bank",
      "Create account.py with an Account class: balance starts 0, deposit(amt) adds, withdraw(amt) subtracts but raises ValueError if amt>balance. Test in another step: a=Account(); a.deposit(100); a.withdraw(30) -> balance 70; a.withdraw(100) raises ValueError. If all correct, print exactly BENCH_OK.",
      "BENCH_OK"),
+    # --- 멀티파일 조율 (import 관계) ---
+    ("multifile",
+     "Create THREE files: mathutils.py with add(a,b) and mul(a,b); calc.py that imports mathutils and has compute() returning add(mul(2,3), 4); main.py that imports calc and prints compute(). Run main.py and verify it prints 10. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
 ]
 
 
