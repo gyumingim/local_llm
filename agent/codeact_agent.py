@@ -9,7 +9,7 @@ CodeAct 에이전트 — 개선판 (mini-swe-agent / smolagents 교훈 반영)
 import io, sys, os, re, json, contextlib, traceback, urllib.request
 
 OLLAMA = "http://localhost:11434/api/chat"
-MODEL = "qwen3-coder-cline:30b"
+MODEL = os.environ.get("AGENT_MODEL", "qwen3-coder-cline:30b")  # AGENT_MODEL로 교체 가능
 BASE = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.join(BASE, "workspace")
 os.makedirs(WORKSPACE, exist_ok=True)
