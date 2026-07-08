@@ -35,6 +35,10 @@ TASKS = [
     ("lru_cache",
      "Create an LRUCache class with __init__(capacity), get(key)->value or -1, put(key,value). Capacity 2: put(1,1); put(2,2); get(1)==1; put(3,3) evicts key 2; get(2)==-1; get(3)==3. If all correct, print exactly BENCH_OK.",
      "BENCH_OK"),
+    # --- 실제 디버깅 (버그 생성→진단→수정) ---
+    ("debug_max",
+     "Create a file with a buggy function `def find_max(lst): return lst[0]`. Run it to see it fails on [3,7,2,9,1]. Then FIX it to return the real maximum. Verify find_max([3,7,2,9,1])==9 and find_max([5])==5. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
 ]
 
 
