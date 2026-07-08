@@ -62,7 +62,14 @@ TASKS = [
      "BENCH_OK"),
     # --- 멀티파일 조율 (import 관계) ---
     ("multifile",
-     "Create THREE files: mathutils.py with add(a,b) and mul(a,b); calc.py that imports mathutils and has compute() returning add(mul(2,3), 4); main.py that imports calc and prints compute(). Run main.py and verify it prints 10. If correct, print exactly BENCH_OK.",
+     "Create THREE files: mathutils.py with add(a,b) and mul(a,b); calc.py that imports mathutils and has compute() returning add(mul(2,3), 4); main.py that imports calc and prints compute(). Use run_py('main.py') to run it and verify it prints 10. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    # --- 사이클3: 플러그인 시스템 + 표준 라이브러리 ---
+    ("plugin",
+     "Create a plugin system: registry.py with PLUGINS={} and register(name,fn) and run_all() returning {name: fn() for each}. greet.py imports registry and registers 'greet' returning 'hi'. main.py imports registry and greet, then prints run_all(). Use run_py('main.py') and verify output contains 'hi'. Print exactly BENCH_OK if correct.",
+     "BENCH_OK"),
+    ("stdlib_json",
+     "Write a program using Python's json module: data={'v':1,'items':[1,2,3]}; save to out.json with json.dump; read back with json.load into loaded; assert loaded==data. If equal, print exactly BENCH_OK.",
      "BENCH_OK"),
 ]
 
