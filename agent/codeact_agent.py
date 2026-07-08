@@ -13,6 +13,29 @@ MODEL = "qwen3-coder-cline:30b"
 BASE = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.join(BASE, "workspace")
 os.makedirs(WORKSPACE, exist_ok=True)
+SKILLS_FILE = os.path.join(BASE, "skills.json")
+SEARXNG = "http://localhost:8888/search"
+
+
+def _web_search(query, k=3):
+    """namespace에 주입 — 에이전트가 코드에서 web_search(...) 호출 (SearXNG 로컬)"""
+    import urllib.parse
+    try:
+        url = SEARXNG + "?" + urllib.parse.urlencode({"q": query, "format": "json"})
+        with urllib.request.urlopen(url, timeout=15) as r:
+            data = json.load(r)
+        return [{"title": x.get("title"), "url": x.get("url"), "content": (x.get("content") or "")[:200]}
+                for x in data.get("results", [])[:k]]
+    except Exception as e:
+        return f"search error: {e}"
+
+
+def _save_skill(name, code):
+    skills = json.load(open(SKILLS_FILE, encoding="utf-8")) if os.path.exists(SKILLS_FILE) else {}
+    skills[name] = code
+    json.dump(skills, open(SKILLS_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    return f"saved skill '{name}'"
+
 
 SYSTEM = """You are a coding agent. You act ONLY by writing Python code.
 Each turn respond in this format:
@@ -26,6 +49,9 @@ Rules:
 - To edit part of a file: read it, modify the string, write it back.
 - Verify by running/importing your code and print(...) the result.
 - Keep each code block small and focused (one step).
+Helpers already available (call directly, no import needed):
+- web_search(query) -> list of {title, url, content}   # local SearXNG
+- save_skill(name, code_string) -> save reusable code for later
 When the task is DONE and you verified it works, respond with NO code block:
 Thought: done
 FINAL: <one-line summary>
@@ -59,11 +85,16 @@ def execute(code, ns):
 
 def run(task, max_steps=15):
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
-    ns = {"__name__": "__agent__"}
+    ns = {"__name__": "__agent__", "web_search": _web_search, "save_skill": _save_skill}
     messages = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": f"Task: {task}"}]
     recent = []
     for step in range(max_steps):
+        # context 압축 (mini-swe-agent 교훈): 오래된 observation을 잘라 context bloat 방지
+        if len(messages) > 12:
+            for msg in messages[2:-6]:
+                if msg["role"] == "user" and len(msg["content"]) > 180:
+                    msg["content"] = msg["content"][:150] + " ...(truncated to save context)"
         out = call_ollama(messages)
         print(f"\n--- Step {step+1} ---\n{out.strip()[:500]}")
         messages.append({"role": "assistant", "content": out})

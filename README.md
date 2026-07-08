@@ -17,11 +17,15 @@ Ollama 로컬 모델 위에, 주요 에이전트 **논문의 기법을 단계적
 | `agent/reflexion_agent.py` | Reflexion (2303.11366) | 실패 시 자기반성→재시도 | 10/0 에러→10/2=5.0 |
 | `agent/voyager_agent.py` | Voyager (2305.16291) | 스킬 라이브러리(저장·재사용) | is_prime 재사용 |
 | `agent/indexer.py` | Codebase Memory | ast 추출 + 임베딩 의미검색 | run_python 검색 |
-| **`agent/agent.py`** | **통합** (+ Plan-and-Solve, CodeAct) | 위 전부 결합 | fibonacci 전과정 |
+| `agent/agent.py` | 통합 (+ Plan-and-Solve) | 커스텀 도구 결합 | fibonacci 전과정 |
+| **`agent/codeact_agent.py`** ⭐ | **CodeAct + mini-swe-agent** | **행동=python코드(파싱문제 없음)** + web_search·save_skill 내장 + context압축 | 버그픽스5·Stack4·quicksort |
 
 ## 사용법
 ```bash
-# 통합 에이전트 (권장)
+# CodeAct 에이전트 (권장 — 행동을 python 코드로, 가장 견고)
+python agent/codeact_agent.py "Create a bubble sort function and test it"
+
+# 통합 에이전트 (커스텀 도구판)
 python agent/agent.py "Create a bubble sort function and test it"
 
 # 코드베이스 인덱싱 후 의미 검색
