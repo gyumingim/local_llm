@@ -136,7 +136,6 @@ def run(task, max_steps=15):
     messages = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": f"Task: {task}{_hint}"}]
     recent = []
-    refined = False
     fail_streak = 0
     for step in range(max_steps):
         # context 압축 (mini-swe-agent 교훈): 오래된 observation을 잘라 context bloat 방지
