@@ -87,7 +87,8 @@ def run_task(task):
     for attempt in range(2):
         t0 = time.time()
         try:
-            r = subprocess.run([sys.executable, AGENT, task], capture_output=True, text=True, timeout=300)
+            r = subprocess.run([sys.executable, AGENT, task], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace", timeout=300)
             out = r.stdout + r.stderr
             return out, out.count("--- Step"), time.time() - t0
         except Exception:
