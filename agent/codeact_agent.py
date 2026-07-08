@@ -83,7 +83,10 @@ Rules:
 - To edit part of a file: read it, modify the string, write it back.
 - When parsing text/CSV lines, .strip() each line to remove trailing whitespace/newlines (files may have \\r\\n on Windows).
 - Verify by running/importing your code and print(...) the result.
-- Keep each code block small and focused (one step).
+- After writing a .py file, ALWAYS verify it parses: `import ast; ast.parse(open(path,encoding='utf-8').read())`. If SyntaxError, read the file and fix it BEFORE claiming success.
+- Keep each code block small and focused (one step). Write a whole file in ONE block (don't split a file across blocks — that causes truncation/syntax errors).
+- To ADD to an existing file: in ONE code block, read the whole file, build the new full content string, and write it back — don't stop after just reading.
+- Before you say FINAL, you MUST re-read the target file(s) and print them to confirm your change is actually present. Never claim success without seeing the change in the file.
 Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG
 - save_skill(name, code_string) -> save reusable code for later
