@@ -86,7 +86,9 @@
 - [x] 실전교훈 반영: CodeAct 에이전트(codeact_agent.py) — 행동=python코드로 통일, 파싱지옥 해결
   (mini-swe-agent 100줄 74% / smolagents 분석). 검증: 버그픽스5·Stack4·다중파일CLI6·웹서치+quicksort
 - [x] web_search/save_skill 헬퍼 namespace 주입 + context압축 + 안전가드(rmtree/os.system 차단)
-- [x] benchmark.py: **19종 19/19 (100%)** — 단일15 + 멀티파일 + 플러그인 + json표준라이브러리 + TODO앱(긴 CRUD)
+- [x] benchmark.py: **19종 19/19 (100%)** — 단일15 + 멀티파일 + 플러그인 + json표준라이브러리 + TODO앱(긴 CRUD, 10 steps)
+- [x] 효율 계측: **평균 2.1 steps/task**(에이전트 프롬프트 이미 효율적), 131s/task(느림=5080 16GB에 30B 오프로드, 하드웨어)
+      → 장기벤치(40분) 중 Ollama 일시장애 발견 → run_task에 1회 재시도 추가(계측 안정화)
 - [x] **강화 사이클2 (실패 기반)**: multifile FAIL → 원인 3개(여러 코드블록 누락 / sys.path에 workspace 없음 / exec import hang)
       → 강화: extract_code 모든블록 추출 + sys.path.insert(WORKSPACE) + run_py 헬퍼(subprocess+timeout)
 - [x] **강화 사이클3**: 플러그인·stdlib 태스크 추가 → 전부 통과(18/18). **강화 후 로컬 30B가 자기완결적 태스크 사실상 다 감당**

@@ -79,11 +79,17 @@ TASKS = [
 
 
 def run_task(task):
-    t0 = time.time()
-    r = subprocess.run([sys.executable, AGENT, task], capture_output=True, text=True, timeout=300)
-    out = r.stdout + r.stderr
-    steps = out.count("--- Step")
-    return out, steps, time.time() - t0
+    # 일시적 timeout/장애 시 1회 재시도 (장기 벤치 안정화)
+    for attempt in range(2):
+        t0 = time.time()
+        try:
+            r = subprocess.run([sys.executable, AGENT, task], capture_output=True, text=True, timeout=300)
+            out = r.stdout + r.stderr
+            return out, out.count("--- Step"), time.time() - t0
+        except Exception:
+            if attempt == 0:
+                continue
+            return "(subprocess failed/timeout after retry)", 0, time.time() - t0
 
 
 def main():
