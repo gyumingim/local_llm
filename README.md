@@ -36,6 +36,10 @@ python agent/agent.py "Create a bubble sort function and test it"
 python agent/indexer.py index
 python agent/indexer.py search "function that runs a file safely"
 
+# 실사용: 실제 프로젝트에서 기존 코드 수정 (AGENT_WORKSPACE 지정)
+AGENT_WORKSPACE=/path/to/project python agent/codeact_agent.py "Fix the bug in foo.py and add feature bar, then run the tests"
+# → 기존 코드를 읽고·수정·검증. 실무 검증됨: 버그수정+기능추가, 입력검증+테스트업데이트
+
 # 벤치마크 (에이전트 품질 측정 / 회귀 테스트)
 python agent/benchmark.py
 

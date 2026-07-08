@@ -15,7 +15,8 @@ except Exception:
 OLLAMA = "http://localhost:11434/api/chat"
 MODEL = os.environ.get("AGENT_MODEL", "qwen3-coder-cline:30b")  # AGENT_MODEL로 교체 가능
 BASE = os.path.dirname(os.path.abspath(__file__))
-WORKSPACE = os.path.join(BASE, "workspace")
+# 실사용: AGENT_WORKSPACE로 실제 작업 디렉토리 지정 가능 (기본은 격리된 workspace)
+WORKSPACE = os.path.abspath(os.environ.get("AGENT_WORKSPACE", os.path.join(BASE, "workspace")))
 os.makedirs(WORKSPACE, exist_ok=True)
 SKILLS_FILE = os.path.join(BASE, "skills.json")
 SEARXNG = "http://localhost:8888/search"
