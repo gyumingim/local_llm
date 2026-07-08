@@ -7,6 +7,10 @@ CodeAct 에이전트 — 개선판 (mini-swe-agent / smolagents 교훈 반영)
 실행: python agent/codeact_agent.py "태스크"
 """
 import io, sys, os, re, json, threading, contextlib, traceback, urllib.request
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows cp949 콘솔 유니코드 출력 크래시 방지
+except Exception:
+    pass
 
 OLLAMA = "http://localhost:11434/api/chat"
 MODEL = os.environ.get("AGENT_MODEL", "qwen3-coder-cline:30b")  # AGENT_MODEL로 교체 가능
