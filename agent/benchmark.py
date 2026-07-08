@@ -71,6 +71,10 @@ TASKS = [
     ("stdlib_json",
      "Write a program using Python's json module: data={'v':1,'items':[1,2,3]}; save to out.json with json.dump; read back with json.load into loaded; assert loaded==data. If equal, print exactly BENCH_OK.",
      "BENCH_OK"),
+    # --- 사이클4: 긴 멀티스텝 프로젝트 (스텝/컨텍스트 한계 탐색) ---
+    ("todo_app",
+     "Build a TODO app across files: todo.py (Todo class: id, text, done=False); store.py (Store class: add(text) returns new id starting at 1, list() returns all todos, complete(id) sets done=True, delete(id) removes); main.py that adds 3 todos ('a','b','c'), completes id 2, deletes id 1, then prints the remaining todos. Use run_py('main.py'). Verify 2 todos remain (b done, c not). Print exactly BENCH_OK if correct.",
+     "BENCH_OK"),
 ]
 
 
