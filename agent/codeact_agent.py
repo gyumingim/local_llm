@@ -6,7 +6,7 @@ CodeAct 에이전트 — 개선판 (mini-swe-agent / smolagents 교훈 반영)
 - 파일 생성/편집/실행/테스트 전부 python 코드로. persistent 세션(변수 유지), cwd=workspace.
 실행: python agent/codeact_agent.py "태스크"
 """
-import io, sys, os, re, json, contextlib, traceback, urllib.request
+import io, sys, os, re, json, threading, contextlib, traceback, urllib.request
 
 OLLAMA = "http://localhost:11434/api/chat"
 MODEL = os.environ.get("AGENT_MODEL", "qwen3-coder-cline:30b")  # AGENT_MODEL로 교체 가능
@@ -55,6 +55,7 @@ Rules:
 - The code runs in a PERSISTENT python session, current directory = workspace.
 - Create or edit files with open(path, 'w'); read with open(path).read().
 - To edit part of a file: read it, modify the string, write it back.
+- When parsing text/CSV lines, .strip() each line to remove trailing whitespace/newlines (files may have \\r\\n on Windows).
 - Verify by running/importing your code and print(...) the result.
 - Keep each code block small and focused (one step).
 Helpers already available (call directly, no import needed):
@@ -80,20 +81,32 @@ def extract_code(text):
     return m.group(1) if m else None
 
 
-def execute(code, ns):
-    """persistent namespace에서 코드 실행, stdout/stderr/에러 반환"""
+def execute(code, ns, timeout=25):
+    """persistent namespace에서 코드 실행 (threading timeout으로 무한루프/블로킹 방지)"""
     # 안전 가드: 명백히 위험한 시스템/삭제 명령 차단
     danger = [d for d in ("shutil.rmtree", "os.system", "subprocess", "os.remove", "os.unlink", "rmdir", "os.rmdir") if d in code]
     if danger:
         return f"BLOCKED for safety: {danger} not allowed. Do file read/write within the workspace only."
-    buf = io.StringIO()
-    try:
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            exec(code, ns)
-        out = buf.getvalue().strip()
-        return out[:1500] if out else "(no output)"
-    except Exception:
-        return (buf.getvalue() + "\n" + traceback.format_exc()).strip()[-1200:]
+    result = {"out": "(execution timed out ~25s — likely an infinite loop or a blocking call like input(). Rewrite without it.)"}
+
+    def _target():
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                exec(code, ns)
+            o = buf.getvalue().strip()
+            result["out"] = o[:1500] if o else "(no output)"
+        except Exception:
+            result["out"] = (buf.getvalue() + "\n" + traceback.format_exc()).strip()[-1200:]
+
+    t = threading.Thread(target=_target, daemon=True)
+    t.start()
+    t.join(timeout)
+    return result["out"]
+
+
+def is_failure(obs):
+    return any(k in obs for k in ("Error", "Traceback", "Exception", "Assertion", "not found", "BLOCKED"))
 
 
 def run(task, max_steps=15):
@@ -106,6 +119,7 @@ def run(task, max_steps=15):
                 {"role": "user", "content": f"Task: {task}{_hint}"}]
     recent = []
     refined = False
+    fail_streak = 0
     for step in range(max_steps):
         # context 압축 (mini-swe-agent 교훈): 오래된 observation을 잘라 context bloat 방지
         if len(messages) > 12:
@@ -116,12 +130,8 @@ def run(task, max_steps=15):
         print(f"\n--- Step {step+1} ---\n{out.strip()[:500]}")
         messages.append({"role": "assistant", "content": out})
         if "FINAL:" in out:
-            if not refined:  # Self-Refine(2303.17651): 완료 전 1회 자기검토
-                refined = True
-                messages.append({"role": "user", "content":
-                    "Self-review: does your code handle edge cases — empty input, zero, negative numbers, boundaries? "
-                    "Could it crash on any valid input? If so, fix it with a ```python block; otherwise reply 'FINAL: <summary>'."})
-                continue
+            # Self-Refine 제거: 로컬 30B에서 self-review가 완료를 방해(무한 개선 유도)하고
+            # 엣지케이스 개선 효과도 없어 순해로움 → 바로 종료 (실패 기반 개선)
             return out.split("FINAL:")[-1].strip()
         code = extract_code(out)
         if not code:
@@ -132,6 +142,12 @@ def run(task, max_steps=15):
         recent.append(code.strip())
         obs = execute(code, ns)
         print(f"[Observation] {obs[:250]}")
+        if is_failure(obs):
+            fail_streak += 1
+            if fail_streak >= 6:  # 무한 반복 방지 (no-progress 조기 종료)
+                return f"(gave up after {fail_streak} consecutive failures — likely stuck)"
+        else:
+            fail_streak = 0
         note = "\n(Note: you repeated the same code. Try a different approach.)" if dup else ""
         messages.append({"role": "user", "content": f"Observation:\n{obs}{note}"})
     return "(max steps reached)"

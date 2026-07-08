@@ -39,6 +39,20 @@ TASKS = [
     ("debug_max",
      "Create a file with a buggy function `def find_max(lst): return lst[0]`. Run it to see it fails on [3,7,2,9,1]. Then FIX it to return the real maximum. Verify find_max([3,7,2,9,1])==9 and find_max([5])==5. If correct, print exactly BENCH_OK.",
      "BENCH_OK"),
+    # --- 실용 태스크 (파일 I/O, 파싱) ---
+    ("csv_parse",
+     "Write a data.csv file containing 'name,age' then 'Alice,30' then 'Bob,25' (3 lines). Then write parse_csv(path) that reads it and returns a list of dicts. Verify parse_csv('data.csv')==[{'name':'Alice','age':'30'},{'name':'Bob','age':'25'}]. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    ("word_count",
+     "Write word_count(text) returning a dict of word->count (case-insensitive, split on whitespace). Verify word_count('the cat the dog THE')=={'the':3,'cat':1,'dog':1}. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    # --- HARD: 파서 구현 (진짜 변별력, 로컬 30B 한계 탐색) ---
+    ("expr_eval",
+     "Write eval_expr(s) that evaluates arithmetic with + - * / and operator precedence and parentheses, WITHOUT using eval()/exec()/import. Verify eval_expr('3 + 4 * 2')==11, eval_expr('(1 + 2) * 3')==9, eval_expr('10 - 2 - 3')==5. If all correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    ("json_parse",
+     "Write parse_json(s) that parses JSON WITHOUT import json, handling objects, arrays, strings, ints, booleans, null. Verify parse_json('{\"a\": [1, 2], \"b\": true}')=={'a':[1,2],'b':True} and parse_json('[1, \"x\", null]')==[1,'x',None]. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
 ]
 
 
