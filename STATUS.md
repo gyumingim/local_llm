@@ -80,6 +80,7 @@
 - [x] 통합 에이전트: agent/agent.py — 검증 fibonacci(plan+생성+실행+스킬)
 - [x] README.md 작성
 - [x] 스트레스 테스트: 다중파일(calc 모듈 + test_calc 어서션) 작성·실행 → PASS
+- [x] 실전 디버깅 테스트: bubble_sort 작성·실행·검증 → SORTED_OK
 - 해결한 버그: 파싱오염(| / Content: / 펜스 / 다중Action / 끝삼중따옴표), dedent, CRLF, 좀비 llama-server OOM
 - 파싱 핵심: Action Input은 다음 키워드 전까지만 캡처 + 모든 펜스라인 제거 + dedent + CRLF정규화
 - 남은 개선(선택): Self-Refine, MemGPT context요약, ToT 다중경로
