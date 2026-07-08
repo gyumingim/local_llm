@@ -4,6 +4,11 @@ ReAct 루프 + 안전한 코드편집 도구셋. workspace/ 안에서만 작업(
 실행: python agent/coding_agent.py "태스크"
 """
 import json, sys, re, os, subprocess, urllib.request
+try:
+    import sys
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except:
+    pass
 
 OLLAMA = "http://localhost:11434/api/chat"
 MODEL = "qwen3-coder-cline:30b"

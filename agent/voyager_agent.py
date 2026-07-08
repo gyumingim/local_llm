@@ -4,6 +4,11 @@ Reflexion(3단계) + 스킬 라이브러리: 성공한 코드를 저장하고 �
 실행: python agent/voyager_agent.py "태스크"
 """
 import json, sys, re, os, subprocess, urllib.request
+try:
+    import sys
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except:
+    pass
 
 OLLAMA = "http://localhost:11434/api/chat"
 MODEL = "qwen3-coder-cline:30b"
