@@ -108,6 +108,13 @@
 **핵심 원칙(사용자 로드맵)**: 논문 하나 읽고 → 바로 기능 하나 구현 → 실제 코드로 연결.
 이렇게 하면 이해도↑ + 단계적으로 나만의 에이전트 완성.
 
+### 실제 구현 현황
+- 1~6단계 전부 구현·검증 완료 → `agent/react_agent.py` ~ `indexer.py`
+- **CodeAct 통합판** `agent/codeact_agent.py` (⭐권장): 행동=python코드로 파싱문제 근본해결
+  + Plan-and-Solve + Reflexion + Self-Refine + web_search/save_skill/use_skill 헬퍼 + context압축 + 안전가드
+- 벤치마크 `agent/benchmark.py`: 알고리즘 자동채점 (4/4 통과 → 6종 확장)
+- 실전교훈: mini-swe-agent(단일도구 100줄 74%)·smolagents(CodeAct)·Agentless(비에이전트 파이프라인)
+
 ---
 
 ## 스택
