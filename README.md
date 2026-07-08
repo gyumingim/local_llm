@@ -51,6 +51,16 @@ python agent/react_agent.py "질문"
 ## 논문 정리
 [research/agent-papers.md](research/agent-papers.md) — 10편 핵심 아이디어 + 적용 포인트
 
+## 검증 (자체 벤치마크 `agent/benchmark.py`)
+| 태스크 유형 | 결과 |
+|---|---|
+| 기초 알고리즘 6종 (factorial·palindrome·gcd·binary_search·fizzbuzz·fibonacci) | qwen3-coder **6/6**, gpt-oss:20b **6/6** |
+| 자료구조·재귀 (merge_sort, LRU cache) | **통과** |
+| 실제 디버깅 (버그 생성→진단→수정, debug_max) | **통과** |
+| **합계** | **9/9 (100%)** |
+
+→ 로컬 qwen3-coder 30B가 알고리즘·자료구조·기본 디버깅에 강함. 진짜 한계는 대규모 실제 저장소(SWE-bench식) — 별도 인프라 필요.
+
 ## 진행 로드맵
 - [x] 1~5단계 + 통합 에이전트 (모두 자체검증 통과)
 - [ ] Self-Refine (Final Answer 전 자기검토) — 선택
