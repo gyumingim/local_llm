@@ -53,6 +53,13 @@ TASKS = [
     ("json_parse",
      "Write parse_json(s) that parses JSON WITHOUT import json, handling objects, arrays, strings, ints, booleans, null. Verify parse_json('{\"a\": [1, 2], \"b\": true}')=={'a':[1,2],'b':True} and parse_json('[1, \"x\", null]')==[1,'x',None]. If correct, print exactly BENCH_OK.",
      "BENCH_OK"),
+    # --- VERY HARD: 다중 컴포넌트 (인터프리터, 상태 시스템) ---
+    ("interpreter",
+     "Write run_program(src) for a tiny language: statements separated by ';'. Supports 'var = expr' assignment and 'print(expr)'. expr has integer literals, variables, and + - * with precedence. Return all printed outputs joined by newline. Verify run_program('x = 3; y = 4; print(x * y + 1); print(y - x)')=='13\\n1'. If correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
+    ("bank",
+     "Create account.py with an Account class: balance starts 0, deposit(amt) adds, withdraw(amt) subtracts but raises ValueError if amt>balance. Test in another step: a=Account(); a.deposit(100); a.withdraw(30) -> balance 70; a.withdraw(100) raises ValueError. If all correct, print exactly BENCH_OK.",
+     "BENCH_OK"),
 ]
 
 

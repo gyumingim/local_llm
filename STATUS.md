@@ -86,9 +86,11 @@
 - [x] 실전교훈 반영: CodeAct 에이전트(codeact_agent.py) — 행동=python코드로 통일, 파싱지옥 해결
   (mini-swe-agent 100줄 74% / smolagents 분석). 검증: 버그픽스5·Stack4·다중파일CLI6·웹서치+quicksort
 - [x] web_search/save_skill 헬퍼 namespace 주입 + context압축 + 안전가드(rmtree/os.system 차단)
-- [x] benchmark.py: **9종 9/9 (100%)** — 알고리즘6 + merge_sort(재귀)·LRU(자료구조) + debug_max(디버깅) 전부 통과.
-      모델비교: qwen3-coder30b·gpt-oss20b 모두 기초 6/6. **로컬 30B가 알고리즘·자료구조·디버깅에 강함**
-      → 진짜 한계는 대규모 실제 저장소(SWE-bench식, 별도 인프라 필요)
+- [x] benchmark.py: **13종 13/13 (100%)** — 알고리즘·자료구조·디버깅·실용(csv/word)·파서(expr_eval/json_parse)
+      모델비교: qwen3-coder30b·gpt-oss20b 모두 기초 6/6.
+- [x] **강화 사이클(실패 기반)**: csv_parse timeout 발견 → 원인: exec에 timeout 없어 무한루프 hang + Self-Refine이 완료 방해
+      → 강화 4종: exec threading timeout(25s) / Self-Refine 제거 / fail_streak(6회 조기종료) / strip 힌트
+      → 결과: csv/debug/파서(expr,json) 전부 통과. **로컬 30B가 파서 구현까지 강함**
 - [x] SETUP.md: 다른 환경 재현 가이드
 - 커밋 6개 (Initial 제외 5개 작업 커밋)
 - [x] Self-Refine(완료 전 자기검토 1회): 명시적 요구 검증엔 유효.
