@@ -83,6 +83,12 @@
 - [x] 실전 디버깅 테스트: bubble_sort 작성·실행·검증 → SORTED_OK
 - 해결한 버그: 파싱오염(| / Content: / 펜스 / 다중Action / 끝삼중따옴표), dedent, CRLF, 좀비 llama-server OOM
 - 파싱 핵심: Action Input은 다음 키워드 전까지만 캡처 + 모든 펜스라인 제거 + dedent + CRLF정규화
+- [x] 실전교훈 반영: CodeAct 에이전트(codeact_agent.py) — 행동=python코드로 통일, 파싱지옥 해결
+  (mini-swe-agent 100줄 74% / smolagents 분석). 검증: 버그픽스5·Stack4·다중파일CLI6·웹서치+quicksort
+- [x] web_search/save_skill 헬퍼 namespace 주입 + context압축 + 안전가드(rmtree/os.system 차단)
+- [x] benchmark.py: 알고리즘 태스크(factorial/palindrome/gcd/binary_search) 자동 채점
+- [x] SETUP.md: 다른 환경 재현 가이드
+- 커밋 6개 (Initial 제외 5개 작업 커밋)
 - 남은 개선(선택): Self-Refine, MemGPT context요약, ToT 다중경로
 
 ## 접근 정보 (karma)

@@ -73,6 +73,10 @@ def extract_code(text):
 
 def execute(code, ns):
     """persistent namespace에서 코드 실행, stdout/stderr/에러 반환"""
+    # 안전 가드: 명백히 위험한 시스템/삭제 명령 차단
+    danger = [d for d in ("shutil.rmtree", "os.system", "subprocess", "os.remove", "os.unlink", "rmdir", "os.rmdir") if d in code]
+    if danger:
+        return f"BLOCKED for safety: {danger} not allowed. Do file read/write within the workspace only."
     buf = io.StringIO()
     try:
         with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
