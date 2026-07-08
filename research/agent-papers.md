@@ -70,6 +70,17 @@
 - **핵심**: OS 가상메모리처럼 main context(RAM) ↔ external storage(디스크)를 함수호출로 페이징. 긴 대화·문서에서 context 한계 극복.
 - **우리 적용**: 긴 작업 시 오래된 대화를 요약해 external로 내리고, 필요할 때 검색해 올림(고급).
 
+## 11. 실전 구현 교훈 (오픈소스 분석)
+- **mini-swe-agent** (github.com/SWE-agent/mini-swe-agent): 단 100줄로 SWE-bench **74%**.
+  비결 = **도구를 bash 하나로 통일** → 커스텀 도구 형식 파싱이 아예 없음. stateless 루프.
+- **smolagents** (huggingface): CodeAgent가 **행동을 Python 코드로** 작성(CodeAct). 추상화 최소(<1000줄).
+- **핵심 교훈 (우리가 겪은 파싱 지옥의 해답)**:
+  1. **단일 코드 도구** = `|`/`Content:`/펜스/들여쓰기/라인 파싱 문제 원천 제거
+  2. **명확한 종료**: iteration cap + no-progress 감지(같은 코드 반복 시 경고)
+  3. **context 압축**: 반복 파일읽기·긴 출력이 context를 채우므로 요약 필요
+- **우리 적용**: `agent/codeact_agent.py` — 모든 행동을 python 코드 블록으로. 파일 생성/편집도 코드로.
+  → 커스텀 도구(create_file/edit_file)가 실패하던 버그픽스를 5스텝에 성공.
+
 ---
 
 ## 우리 프로젝트 적용 로드맵 (한 편 = 한 기능)

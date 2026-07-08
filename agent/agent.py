@@ -57,6 +57,29 @@ def tool_view_file(arg):
     return "".join(f"{i+1}: {l}" for i, l in enumerate(lines))[:2000]
 
 
+def tool_edit_file(arg):
+    """라인 기반 부분 수정. FIRST=path, SECOND=range(예 '3-5'), REST=새 코드"""
+    arg = _clean(arg)
+    parts = arg.split("\n", 2)
+    if len(parts) < 2:
+        return "format: path / line range(e.g. 3-5) / new code"
+    path = parts[0].strip().strip('`').strip('"')
+    m = re.match(r"(\d+)\s*-\s*(\d+)|(\d+)", parts[1].strip())
+    if not m:
+        return "second line must be a line range like '3-5' or '3'"
+    start = int(m.group(1) or m.group(3))
+    end = int(m.group(2) or m.group(3))
+    new = re.sub(r"^\s*```\w*\s*$", "", (parts[2] if len(parts) > 2 else "").replace("\r\n", "\n"), flags=re.M)
+    new = textwrap.dedent(new).rstrip("\n")
+    full = _safe(path)
+    lines = open(full, encoding="utf-8").read().split("\n")
+    if start < 1 or end > len(lines):
+        return f"line range out of bounds (file has {len(lines)} lines)"
+    lines[start - 1:end] = new.split("\n")
+    open(full, "w", encoding="utf-8").write("\n".join(lines))
+    return f"edited {path} lines {start}-{end}"
+
+
 def tool_run_python(arg):
     try:
         r = subprocess.run([sys.executable, _safe(arg)], capture_output=True, text=True, timeout=30, cwd=WORKSPACE)
@@ -92,15 +115,17 @@ def tool_search_codebase(arg):
 
 
 TOOLS = {"create_file": tool_create_file, "view_file": tool_view_file,
-         "run_python": tool_run_python, "save_skill": tool_save_skill,
-         "use_skill": tool_use_skill, "search_codebase": tool_search_codebase}
+         "edit_file": tool_edit_file, "run_python": tool_run_python,
+         "save_skill": tool_save_skill, "use_skill": tool_use_skill,
+         "search_codebase": tool_search_codebase}
 
 SYSTEM = """You are an autonomous coding agent (sandbox = 'workspace' folder).
 You: PLAN first, then ACT step by step, LEARN from failures, and SAVE reusable skills.
 
 Tools:
 - create_file: FIRST line = path, following lines = content. No '|', quotes, or fences.
-- view_file: Action Input = path.
+- view_file: show file with line numbers. Action Input = path.
+- edit_file: replace specific lines. FIRST line = path, SECOND line = range like "3-5", following lines = new code. (view_file first to get line numbers)
 - run_python: run a py file. Action Input = path.
 - save_skill: FIRST line = skill name, following lines = code.
 - use_skill: Action Input = skill name.
