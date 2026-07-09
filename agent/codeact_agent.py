@@ -78,6 +78,7 @@ Thought: <short reasoning>
 <code to run>
 ```
 Rules:
+- For a complex/multi-part task, FIRST write a short numbered PLAN (2-4 steps) in your Thought, then execute ONE step per turn. Don't cram multiple file operations into one block.
 - The code runs in a PERSISTENT python session, current directory = workspace.
 - Create or edit files with open(path, 'w'); read with open(path).read().
 - To edit part of a file: read it, modify the string, write it back.
@@ -150,8 +151,13 @@ def run(task, max_steps=15):
           "search_codebase": _search_codebase}
     _sk = _load_skills()
     _hint = ("\nSaved skills available via use_skill(name): " + ", ".join(_sk)) if _sk else ""
+    # md 압축 메모리: PROJECT_MAP.md 있으면 프로젝트 구조를 자동 주입 (32K 안에서 전체 파악)
+    _pmap = ""
+    _pm_path = os.path.join(WORKSPACE, "PROJECT_MAP.md")
+    if os.path.exists(_pm_path):
+        _pmap = "\n\n[Project structure — PROJECT_MAP.md]\n" + open(_pm_path, encoding="utf-8").read()[:4000]
     messages = [{"role": "system", "content": SYSTEM},
-                {"role": "user", "content": f"Task: {task}{_hint}"}]
+                {"role": "user", "content": f"Task: {task}{_hint}{_pmap}"}]
     recent = []
     fail_streak = 0
     for step in range(max_steps):

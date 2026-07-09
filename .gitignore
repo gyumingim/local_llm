@@ -14,3 +14,6 @@ agent/skills.json
 finetune/ft_data.jsonl
 finetune/out/
 finetune/model_ft/
+
+# 압축 메모리(재생성 가능)
+PROJECT_MAP.md
