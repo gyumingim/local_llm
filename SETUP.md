@@ -16,6 +16,20 @@ printf 'FROM qwen3-coder:30b\nPARAMETER num_ctx 32768\n' > Modelfile
 ollama create qwen3-coder-cline:30b -f Modelfile
 ```
 
+## 1.5 성능 최적화 (flash attention — 권장)
+Ollama 속도·메모리 최적화. 환경변수 설정 후 Ollama 재시작 (재부팅해도 유지):
+```powershell
+# Windows (PowerShell)
+[Environment]::SetEnvironmentVariable("OLLAMA_FLASH_ATTENTION","1","User")
+[Environment]::SetEnvironmentVariable("OLLAMA_KV_CACHE_TYPE","q8_0","User")
+```
+```bash
+# Linux/Mac (~/.bashrc 또는 ~/.zshrc에 추가)
+export OLLAMA_FLASH_ATTENTION=1
+export OLLAMA_KV_CACHE_TYPE=q8_0
+```
+→ VRAM 오프로드 감소, 긴 context 메모리 절반. (근본 속도 한계는 모델 크기 vs VRAM)
+
 ## 2. 에이전트 실행
 ```bash
 # 권장: CodeAct 방식 (행동=python 코드, 파싱문제 없음)
