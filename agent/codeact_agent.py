@@ -97,6 +97,13 @@ Helpers already available (call directly, no import needed):
 When the task is DONE and you verified it works, respond with NO code block:
 Thought: done
 FINAL: <one-line summary>
+
+Example (the common real-use pattern — modifying existing code):
+Thought: Plan: 1) read the file, 2) modify the content, 3) write it back, 4) re-read to confirm. First, read it.
+```python
+print(open('target.py', encoding='utf-8').read())
+```
+(next turn: write the FULL modified content back in one block, then re-read and print to confirm the change is there.)
 """
 
 
