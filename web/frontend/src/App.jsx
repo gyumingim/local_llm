@@ -43,12 +43,14 @@ function Linkify({ text }) {
 // ```코드``` 부분만 코드 상자로, 나머지는 링크를 살린 글
 function Rich({ text }) {
   return text.split(/```(?:\w+)?\n?([\s\S]*?)(?:```|$)/).map((part, i) =>
-    i % 2 ? <pre key={i}>{part.trimEnd()}</pre> : part && <span key={i}><Linkify text={part} /></span>
+    // 빈 코드 블록(답 끝의 ``` 등)은 회색 빈 상자로 남지 않게 뺀다
+    i % 2 ? part.trim() && <pre key={i}>{part.trimEnd()}</pre> : part && <span key={i}><Linkify text={part} /></span>
   );
 }
 
 const IMG_RE = /\.(png|jpe?g|gif|webp|bmp)$/i;
 const fileUrl = (p) => `/api/file?path=${encodeURIComponent(p)}`;
+const dlUrl = (p) => `${fileUrl(p)}&download=1`;
 
 // 파일(File 객체) → data URL
 const readAsDataUrl = (file) =>
@@ -214,14 +216,20 @@ export default function App() {
                     return (
                       <figure key={f.path} onClick={() => setZoom(src)} title={f.path}>
                         <img src={src} alt={f.path} loading="lazy" />
-                        <figcaption>{f.path.split("/").pop()}</figcaption>
+                        <figcaption>
+                          <span>{f.path.split("/").pop()}</span>
+                          <a href={dlUrl(f.path)} download onClick={(e) => e.stopPropagation()} title="다운로드">⬇</a>
+                        </figcaption>
                       </figure>
                     );
                   })}
                 </div>
                 {m.files.filter((f) => !(f.image || IMG_RE.test(f.path))).map((f) => (
                   <details key={f.path}>
-                    <summary>📄 {f.path}</summary>
+                    <summary>
+                      📄 {f.path}
+                      <a className="dl" href={dlUrl(f.path)} download onClick={(e) => e.stopPropagation()}>⬇ 다운로드</a>
+                    </summary>
                     <pre>{f.content}</pre>
                   </details>
                 ))}

@@ -125,11 +125,12 @@ def upload(req: UploadReq):
 
 
 @app.get("/api/file")
-def get_file(path: str):
+def get_file(path: str, download: bool = False):
     p = in_workspace(path)
     if not os.path.isfile(p):
         raise HTTPException(404, "파일 없음")
-    return FileResponse(p)
+    # download=1 이면 브라우저가 열지 않고 내려받게 (Content-Disposition: attachment)
+    return FileResponse(p, filename=os.path.basename(p) if download else None)
 
 
 @app.post("/api/agent")
