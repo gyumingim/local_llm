@@ -102,6 +102,7 @@ research/agent-papers.md  # 논문 11편 정리
 
 ## 5. 웹 UI (FastAPI + Vite React) — 브라우저에서 에이전트 쓰기
 필요: Python 3.10+, Node.js 18+, 위 1번의 `qwen3-coder-cline:30b` 모델 (웹은 이 커스텀 모델만 허용).
+이미지 읽기(`see_image`)는 비전 모델이 필요하다: `ollama pull qwen2.5vl:7b` (다른 모델은 `VISION_MODEL` 로). 그림 그리기는 `pip install matplotlib`.
 웹서치를 쓰려면 3번 SearXNG 도 켜 둔다 (날씨 `get_weather` 는 SearXNG 없이 인터넷만 있으면 됨).
 ```bash
 # 백엔드 (터미널 1)

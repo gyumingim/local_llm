@@ -81,6 +81,24 @@ def _get_weather(city):
         return f"weather error: {e}"
 
 
+VISION_MODEL = os.environ.get("VISION_MODEL") or "qwen2.5vl:7b"
+
+
+def _see_image(path, question="이 이미지에 무엇이 있는지 자세히 설명해줘. 글자가 있으면 그대로 옮겨 적어줘."):
+    """namespace에 주입 — 비전 모델(qwen2.5vl)로 이미지 읽기. path 는 workspace 기준 경로"""
+    import base64
+    try:
+        with open(path, "rb") as fh:
+            img = base64.b64encode(fh.read()).decode()
+        body = json.dumps({"model": VISION_MODEL, "stream": False, "keep_alive": "10m",
+                           "messages": [{"role": "user", "content": question, "images": [img]}]}).encode()
+        req = urllib.request.Request(OLLAMA, data=body, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=300) as r:
+            return json.load(r)["message"]["content"].strip()
+    except Exception as e:
+        return f"see_image error: {e}"
+
+
 def _load_skills():
     return json.load(open(SKILLS_FILE, encoding="utf-8")) if os.path.exists(SKILLS_FILE) else {}
 
@@ -152,6 +170,8 @@ def _detect_action(code):
         return "✏️ 파일 작성"
     if "run_py" in code:
         return "▶ 실행"
+    if "see_image" in code:
+        return "🖼 이미지 읽기"
     if "get_weather" in code:
         return "🌤 날씨 조회"
     if "web_search" in code or "fetch_url" in code:
@@ -186,6 +206,8 @@ Rules:
 Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG. 스니펫이 부족하면 fetch_url 로 본문을 읽어라
 - fetch_url(url) -> 웹 페이지 본문 텍스트 (앞 3000자)
+- see_image(path, question) -> 이미지 내용을 글로 (비전 모델). 사용자가 이미지를 첨부하면 이것으로 먼저 읽고 답하라. 질문을 구체적으로 넘겨라
+- 그림·그래프를 만들어 달라면 matplotlib 등으로 workspace 에 .png 로 저장하라 (plt.savefig('chart.png')) — 저장한 이미지는 사용자 화면에 자동으로 보인다. plt.show() 금지
 - 웹에서 찾은 자료·출처를 답에 적을 때는 반드시 각 항목에 web_search 결과의 실제 url 을 함께 써라. 형식: [제목](https://...) — 링크 없는 자료 목록 금지, url 을 지어내지 말 것
 - get_weather(city) -> 실시간 날씨 + 3일 예보. city 는 반드시 영어 이름 (서울→'Seoul', 부산→'Busan'). 날씨 질문엔 web_search 말고 이것을 써라
 - save_skill(name, code_string) -> save reusable code for later
@@ -333,7 +355,7 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
     if WORKSPACE not in sys.path:
         sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
-    ns = {"__name__": "__agent__", "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather,
+    ns = {"__name__": "__agent__", "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image,
           "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py,
           "search_codebase": _search_codebase, "grep_code": _grep_code}
     _sk = _load_skills()

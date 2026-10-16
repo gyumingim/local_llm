@@ -4,6 +4,8 @@
 
 - `codeact_agent.py`를 하위 프로세스로 띄우고 (`AGENT_JSON=1`) 단계·토큰·관찰을 로그로 보여 준다. 작업 폴더는 `agent/workspace` (`AGENT_WORKSPACE`로 바꿈).
 
+- 이미지: 붙여 넣기(Ctrl+V)·끌어다 놓기·📎 로 첨부 → `workspace/uploads/` 에 저장되고 에이전트가 `see_image()` (qwen2.5vl:7b) 로 읽는다. 에이전트가 만든 이미지(.png 등)는 답 아래에 그림으로 보인다.
+
 ## 실행
 ```bash
 # 1) 백엔드 (터미널 1)

@@ -47,16 +47,32 @@ function Rich({ text }) {
   );
 }
 
+const IMG_RE = /\.(png|jpe?g|gif|webp|bmp)$/i;
+const fileUrl = (p) => `/api/file?path=${encodeURIComponent(p)}`;
+
+// 파일(File 객체) → data URL
+const readAsDataUrl = (file) =>
+  new Promise((ok, bad) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result);
+    r.onerror = bad;
+    r.readAsDataURL(file);
+  });
+
 export default function App() {
   const [models, setModels] = useState([]);
   const [model, setModel] = useState(localStorage.getItem("model") || "");
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
+  const [pending, setPending] = useState([]); // 보내기 전 첨부 이미지 [{name, dataUrl}]
+  const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [zoom, setZoom] = useState(null); // 크게 볼 이미지 URL
   const abortRef = useRef(null);
   const runIdRef = useRef(null);
   const bottomRef = useRef(null);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     fetch("/api/models")
@@ -80,20 +96,45 @@ export default function App() {
       return copy;
     });
 
+  async function addFiles(fileList) {
+    const imgs = [...fileList].filter((f) => f.type.startsWith("image/"));
+    if (!imgs.length) return;
+    const added = await Promise.all(imgs.map(async (f) => ({ name: f.name || "pasted.png", dataUrl: await readAsDataUrl(f) })));
+    setPending((p) => [...p, ...added]);
+  }
+
   async function send() {
-    const text = input.trim();
+    const text = input.trim() || (pending.length ? "첨부한 이미지를 보고 설명해줘" : "");
     if (!text || busy || !model) return;
-    setInput("");
     setErr("");
-    const history = msgs;
-    setMsgs([...history, { role: "user", text }, { role: "assistant", text: "", log: "" }]);
     setBusy(true);
+    const images = [];
+    try {
+      // 첨부 이미지를 먼저 workspace/uploads 에 올리고 경로를 받음
+      for (const p of pending) {
+        const r = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: p.name, data: p.dataUrl }),
+        });
+        if (!r.ok) throw new Error("이미지 올리기 실패: " + (await r.text()));
+        images.push((await r.json()).path);
+      }
+    } catch (e) {
+      setErr(e.message);
+      setBusy(false);
+      return;
+    }
+    setInput("");
+    setPending([]);
+    const history = msgs;
+    setMsgs([...history, { role: "user", text, images }, { role: "assistant", text: "", log: "" }]);
     const ac = new AbortController();
     abortRef.current = ac;
     try {
       let inObs = false;
       const hist = history.slice(-6).map((m) => `${m.role === "user" ? "나" : "AI"}: ${m.text.slice(0, 500)}`).join("\n");
-      await streamPost("/api/agent", { model, task: text, history: hist }, (ev) => {
+      await streamPost("/api/agent", { model, task: text, history: hist, images }, (ev) => {
         if (ev.t === "run") runIdRef.current = ev.id;
         else if (ev.t === "step") patchLast((m) => ({ ...m, step: ev.n, log: m.log + `\n\n── Step ${ev.n} ──\n` }));
         else if (ev.t === "action") patchLast((m) => ({ ...m, action: ev.d }));
@@ -104,7 +145,8 @@ export default function App() {
           else if (ev.d.startsWith("--- Step") || ev.d.startsWith("FINAL:") || ev.d.startsWith("=== RESULT")) inObs = false;
           if (inObs) patchLast((m) => ({ ...m, log: m.log + "\n" + ev.d }));
         }
-        else if (ev.t === "files") patchLast((m) => ({ ...m, files: ev.files }));
+        // 사용자가 올린 이미지(uploads/)는 답 아래에 다시 보여 줄 필요 없음
+        else if (ev.t === "files") patchLast((m) => ({ ...m, files: ev.files.filter((f) => !f.path.startsWith("uploads/")) }));
         else if (ev.t === "end")
           patchLast((m) => ({ ...m, text: ev.final || "작업이 도중에 멈췄습니다. 로그를 확인하고 \"이어서 해줘\"라고 해 보세요." }));
       }, ac.signal);
@@ -124,7 +166,12 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDrag(false); }}
+      onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
+    >
       <header>
         <b>Local LLM</b>
         <select value={model} onChange={(e) => setModel(e.target.value)} disabled={busy}>
@@ -136,11 +183,17 @@ export default function App() {
       <main>
         {msgs.length === 0 && (
           <div className="empty">
-            에이전트가 파이썬 코드를 실행하며 작업합니다 — 파일 작업, 웹 검색, 날씨 (agent/workspace)
+            에이전트가 파이썬 코드를 실행하며 작업합니다 — 파일 작업, 웹 검색, 날씨, 이미지 읽기·그리기 (agent/workspace)
+            <br />이미지는 붙여 넣기(Ctrl+V) · 끌어다 놓기 · 📎 로 첨부
           </div>
         )}
         {msgs.map((m, i) => (
           <div key={i} className={"msg " + m.role}>
+            {m.images?.length > 0 && (
+              <div className="thumbs">
+                {m.images.map((p) => <img key={p} src={fileUrl(p)} alt={p} onClick={() => setZoom(fileUrl(p))} />)}
+              </div>
+            )}
             {m.log && (
               <details className="log" open={busy && i === msgs.length - 1}>
                 <summary>
@@ -154,12 +207,20 @@ export default function App() {
             </div>
             {m.files?.length > 0 && (
               <div className="files">
-                {m.files.map((f) => (
-                  <details key={f.path}>
-                    <summary>📄 {f.path}</summary>
-                    <pre>{f.content}</pre>
-                  </details>
-                ))}
+                {m.files.map((f) =>
+                  f.image || IMG_RE.test(f.path) ? (
+                    <figure key={f.path}>
+                      {/* 같은 이름으로 다시 그린 그림도 새로 보이게 메시지 번호를 붙임 */}
+                      <img src={`${fileUrl(f.path)}&v=${i}`} alt={f.path} onClick={() => setZoom(`${fileUrl(f.path)}&v=${i}`)} />
+                      <figcaption>🖼 {f.path}</figcaption>
+                    </figure>
+                  ) : (
+                    <details key={f.path}>
+                      <summary>📄 {f.path}</summary>
+                      <pre>{f.content}</pre>
+                    </details>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -169,20 +230,43 @@ export default function App() {
       </main>
 
       <footer>
-        <textarea
-          value={input}
-          placeholder="에이전트에게 시킬 작업 (Enter 전송, Shift+Enter 줄바꿈)"
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              send();
-            }
-          }}
-          rows={2}
-        />
-        {busy ? <button onClick={stop} className="stop">중단</button> : <button onClick={send} disabled={!input.trim() || !model}>전송</button>}
+        {pending.length > 0 && (
+          <div className="pending">
+            {pending.map((p, k) => (
+              <div key={k} className="pend">
+                <img src={p.dataUrl} alt={p.name} />
+                <button title="빼기" onClick={() => setPending((ps) => ps.filter((_, j) => j !== k))}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="row">
+          <button className="ghost clip" title="이미지 첨부" onClick={() => fileRef.current?.click()} disabled={busy}>📎</button>
+          <input ref={fileRef} type="file" accept="image/*" multiple hidden
+                 onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+          <textarea
+            value={input}
+            placeholder="에이전트에게 시킬 작업 (Enter 전송, Shift+Enter 줄바꿈, Ctrl+V 로 이미지 붙여 넣기)"
+            onChange={(e) => setInput(e.target.value)}
+            onPaste={(e) => {
+              const files = [...e.clipboardData.files];
+              if (files.some((f) => f.type.startsWith("image/"))) { e.preventDefault(); addFiles(files); }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            rows={2}
+          />
+          {busy ? <button onClick={stop} className="stop">중단</button>
+                : <button onClick={send} disabled={(!input.trim() && !pending.length) || !model}>전송</button>}
+        </div>
       </footer>
+
+      {zoom && <div className="zoom" onClick={() => setZoom(null)}><img src={zoom} alt="" /></div>}
+      {drag && <div className="dropzone">여기에 이미지를 놓으세요</div>}
     </div>
   );
 }
