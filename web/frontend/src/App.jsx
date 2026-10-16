@@ -25,10 +25,25 @@ async function streamPost(url, body, onEvent, signal) {
   }
 }
 
-// ```코드``` 부분만 코드 상자로, 나머지는 그대로 글
+// 글 안의 [제목](url) 과 맨 url 을 누를 수 있는 링크로
+function Linkify({ text }) {
+  const out = [];
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>()"'，、]+[^\s<>()"'，、.,;:!?])/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const href = m[2] || m[3];
+    out.push(<a key={m.index} href={href} target="_blank" rel="noreferrer">{m[1] || href}</a>);
+    last = re.lastIndex;
+  }
+  out.push(text.slice(last));
+  return out;
+}
+
+// ```코드``` 부분만 코드 상자로, 나머지는 링크를 살린 글
 function Rich({ text }) {
   return text.split(/```(?:\w+)?\n?([\s\S]*?)(?:```|$)/).map((part, i) =>
-    i % 2 ? <pre key={i}>{part.trimEnd()}</pre> : part && <span key={i}>{part}</span>
+    i % 2 ? <pre key={i}>{part.trimEnd()}</pre> : part && <span key={i}><Linkify text={part} /></span>
   );
 }
 

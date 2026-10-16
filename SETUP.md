@@ -99,3 +99,24 @@ agent/
   indexer.py         # 5단계 코드 인덱싱(임베딩)
 research/agent-papers.md  # 논문 11편 정리
 ```
+
+## 5. 웹 UI (FastAPI + Vite React) — 브라우저에서 에이전트 쓰기
+필요: Python 3.10+, Node.js 18+, 위 1번의 `qwen3-coder-cline:30b` 모델 (웹은 이 커스텀 모델만 허용).
+웹서치를 쓰려면 3번 SearXNG 도 켜 둔다 (날씨 `get_weather` 는 SearXNG 없이 인터넷만 있으면 됨).
+```bash
+# 백엔드 (터미널 1)
+cd web/backend
+pip install -r requirements.txt
+python -m uvicorn main:app --port 8010
+
+# 프론트엔드 (터미널 2)
+cd web/frontend
+npm install
+npm run dev          # → http://localhost:5173
+```
+- 웹은 `OLLAMA_HOST` 를 지정하지 않으면 이 컴의 Ollama(`http://localhost:11434`)를 쓴다.
+- ⚠️ `agent/codeact_agent.py` 를 **명령줄에서 직접** 돌릴 때는 기본 `OLLAMA_HOST` 가 karma(tailscale) 주소이고
+  기본 모델도 이 저장소에 없는 모델이다. 새 컴에서는 꼭 지정한다:
+  `OLLAMA_HOST=http://localhost:11434 AGENT_MODEL=qwen3-coder-cline:30b python agent/codeact_agent.py "태스크"`
+- 재부팅 뒤: Docker Desktop 켜기 → `docker start searxng` (자동 시작 원하면 `docker update --restart unless-stopped searxng`).
+- 자세한 것: `web/README.md`.

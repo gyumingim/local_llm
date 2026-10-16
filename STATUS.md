@@ -118,7 +118,7 @@
 - 검증 요약: 벤치 4/4(100%) + 버그픽스·클래스·다중파일·웹서치·quicksort 전부 통과
 
 ## 접근 정보 (karma)
-- ssh: karma@karma (비번 1234) / plink -hostkey SHA256:/XUK2IGZJoYyBjrIC1O6oFffGLv+bB5APJbKGpehIao
+- ssh: karma@karma (비밀번호는 저장소에 적지 않음 — 따로 보관)
 - ollama: http://100.126.163.103:11434 (tailscale, 같은 LAN 2ms)
 
 ## 문제점 및 해결방안

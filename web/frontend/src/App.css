@@ -34,6 +34,8 @@ summary { cursor: pointer; user-select: none; }
 pre { background: var(--code); border-radius: 8px; padding: 10px; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 12.5px/1.45 ui-monospace, Consolas, monospace; margin: 6px 0 0; }
 .dots { color: var(--dim); }
 .text pre { margin: 8px 0; color: var(--text); }
+.text a { color: var(--accent); word-break: break-all; }
+.msg.user .text a { color: inherit; text-decoration: underline; }
 .files { margin-top: 6px; }
 .files summary { color: var(--accent); }
 .err { color: var(--err); font-size: 14px; }

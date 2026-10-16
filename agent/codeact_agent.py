@@ -186,6 +186,7 @@ Rules:
 Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG. 스니펫이 부족하면 fetch_url 로 본문을 읽어라
 - fetch_url(url) -> 웹 페이지 본문 텍스트 (앞 3000자)
+- 웹에서 찾은 자료·출처를 답에 적을 때는 반드시 각 항목에 web_search 결과의 실제 url 을 함께 써라. 형식: [제목](https://...) — 링크 없는 자료 목록 금지, url 을 지어내지 말 것
 - get_weather(city) -> 실시간 날씨 + 3일 예보. city 는 반드시 영어 이름 (서울→'Seoul', 부산→'Busan'). 날씨 질문엔 web_search 말고 이것을 써라
 - save_skill(name, code_string) -> save reusable code for later
 - use_skill(name) -> retrieve a previously saved skill's code (reuse instead of rewriting)
