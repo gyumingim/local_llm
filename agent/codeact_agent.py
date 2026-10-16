@@ -153,8 +153,10 @@ def _run_py(path):
     """파일 실행 전용 (subprocess+timeout) — exec의 import/hang 문제 우회. 멀티파일 실행에 사용."""
     import subprocess
     try:
+        # 자식 파이썬도 utf-8 로 읽고 쓰게 (없으면 Windows 에서 한글 출력이 cp949 로 나와 깨짐)
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
         r = subprocess.run([sys.executable, path], capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=30, cwd=WORKSPACE)
+                           encoding="utf-8", errors="replace", timeout=30, cwd=WORKSPACE, env=env)
         return (r.stdout + r.stderr).strip() or "(no output)"
     except Exception as e:
         return f"run error: {e}"
@@ -306,12 +308,24 @@ def extract_code(text):
     return "\n".join(blocks) if blocks else None
 
 
+def _open_utf8(file, mode="r", *args, **kw):
+    """에이전트 코드의 open() — 텍스트 모드 기본 인코딩을 utf-8 로 (Windows 기본 cp949 라 한글 파일이 깨짐)"""
+    if "b" not in mode and not args and "encoding" not in kw:
+        kw["encoding"] = "utf-8"
+    return open(file, mode, *args, **kw)
+
+
 def execute(code, ns, timeout=25):
     """persistent namespace에서 코드 실행 (threading timeout으로 무한루프/블로킹 방지)"""
     # 안전 가드: 명백히 위험한 시스템/삭제 명령 차단
     danger = [d for d in ("shutil.rmtree", "os.system", "subprocess", "os.remove", "os.unlink", "rmdir", "os.rmdir") if d in code]
     if danger:
-        return f"BLOCKED for safety: {danger} not allowed. Do file read/write within the workspace only."
+        hint = " To run a .py file use run_py(path) (already available, no import)." if "subprocess" in danger else ""
+        return f"BLOCKED for safety: {danger} not allowed. Do file read/write within the workspace only.{hint}"
+    # 모델이 도우미 함수를 모듈처럼 import 하는 실수 (import run_py) → 그 줄만 지움 (이미 전역에 있음)
+    helpers = "|".join(k for k in ns if not k.startswith("__") and callable(ns[k]))
+    if helpers:
+        code = re.sub(rf"(?m)^[ \t]*(?:import[ \t]+(?:{helpers})|from[ \t]+(?:{helpers})[ \t]+import[^\n]*)[ \t]*$", "", code)
     result = {"out": "(execution timed out ~25s — likely an infinite loop or a blocking call like input(). Rewrite without it.)"}
 
     def _target():
@@ -334,7 +348,12 @@ def execute(code, ns, timeout=25):
             o = buf.getvalue().strip()
             result["out"] = o[:1500] if o else "(no output)"
         except Exception:
-            result["out"] = (buf.getvalue() + "\n" + traceback.format_exc()).strip()[-1200:]
+            # 에이전트 내부 프레임(이 파일)은 빼고 모델 코드 쪽 오류만 보여 줌 — 내부 줄 번호는 모델을 헷갈리게 함
+            etype, err, tb = sys.exc_info()
+            while tb is not None and tb.tb_frame.f_code.co_filename == __file__:
+                tb = tb.tb_next
+            tb_text = "".join(traceback.format_exception(etype, err, tb))
+            result["out"] = (buf.getvalue() + "\n" + tb_text).strip()[-1200:]
 
     t = threading.Thread(target=_target, daemon=True)
     t.start()
@@ -393,7 +412,7 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
     if WORKSPACE not in sys.path:
         sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
-    ns = {"__name__": "__agent__", "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search,
+    ns = {"__name__": "__agent__", "open": _open_utf8, "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search,
           "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py,
           "search_codebase": _search_codebase, "grep_code": _grep_code}
     _sk = _load_skills()
@@ -441,7 +460,9 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
             return ans
         emit({"t": "action", "d": _detect_action(code)})  # 현재 작업 알림 (진행표시)
         # no-progress 감지 (mini-swe-agent 교훈): 같은 코드를 반복하면 진전 없음 → 중단
-        dup = code.strip() in recent[-3:]
+        import difflib
+        # 거의 같은 코드(따옴표·주석만 바뀐 것)도 반복으로 봄
+        dup = any(difflib.SequenceMatcher(None, code.strip(), r).ratio() > 0.9 for r in recent[-3:])
         recent.append(code.strip())
         if dup:
             dup_streak += 1
@@ -450,14 +471,17 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
         else:
             dup_streak = 0
         obs = execute(code, ns)
-        print(f"[Observation] {obs[:250]}")
+        print(f"[Observation] {obs[:800]}")
         if is_failure(obs):
             fail_streak += 1
             if fail_streak >= 6:  # 무한 반복 방지 (no-progress 조기 종료) → 지금까지 결과로 마무리
                 return finalize(messages, "여러 번 연속 실패해 멈췄습니다. 지금까지 시도한 내용을 확인해 더 구체적으로 다시 시켜주세요.")
         else:
             fail_streak = 0
-        note = "\n(Note: you repeated the same code. Try a different approach.)" if dup else ""
+        note = ("\n(Note: you repeated almost the same code. If the task is already done, answer with FINAL now; "
+                "otherwise try a different approach.)") if dup else ""
+        if not is_failure(obs) and not dup:
+            note += "\n(If this result completes the task, reply now with FINAL: and no code.)"
         if early_final:
             note += ("\n(Note: you wrote FINAL before seeing this result, so it was ignored. "
                      "Now write FINAL using the ACTUAL values above — no placeholders like [온도].)")

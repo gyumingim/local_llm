@@ -143,7 +143,7 @@ def agent(req: AgentReq):
     run_id = uuid.uuid4().hex[:8]
     env = {**os.environ, "AGENT_JSON": "1", "AGENT_MODEL": req.model, "AGENT_HISTORY": req.history,
            "AGENT_WORKSPACE": WORKSPACE, "OLLAMA_HOST": OLLAMA_HOST, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1",
-           "MPLBACKEND": "Agg"}  # 그림은 창 없이 파일로만
+           "MPLBACKEND": "Agg", "PYTHONUTF8": "1"}  # 그림은 창 없이 파일로만
     before = snapshot()
     proc = subprocess.Popen([sys.executable, CODEACT, task], cwd=WORKSPACE if os.path.isdir(WORKSPACE) else ROOT,
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
