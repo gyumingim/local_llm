@@ -80,7 +80,20 @@ function Rich({ text }) {
   return out;
 }
 
-const IMG_RE = /\.(png|jpe?g|gif|webp|bmp)$/i;
+const fmtSec = (ms) => (ms < 60000 ? `${(ms / 1000).toFixed(1)}초` : `${Math.floor(ms / 60000)}분 ${Math.round((ms % 60000) / 1000)}초`);
+
+// 걸린 시간 — 끝났으면 고정 값, 진행 중이면 0.1초마다 갱신
+function Elapsed({ start, end }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (end) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(id);
+  }, [end]);
+  return <span className="elapsed">⏱ {fmtSec((end || now) - start)}</span>;
+}
+
+const IMG_RE =/\.(png|jpe?g|gif|webp|bmp)$/i;
 const fileUrl = (p) => `/api/file?path=${encodeURIComponent(p)}`;
 const dlUrl = (p) => `${fileUrl(p)}&download=1`;
 
@@ -162,7 +175,7 @@ export default function App() {
     setInput("");
     setPending([]);
     const history = msgs;
-    setMsgs([...history, { role: "user", text, images }, { role: "assistant", text: "", log: "" }]);
+    setMsgs([...history, { role: "user", text, images }, { role: "assistant", text: "", log: "", start: Date.now() }]);
     const ac = new AbortController();
     abortRef.current = ac;
     try {
@@ -188,6 +201,7 @@ export default function App() {
       if (e.name !== "AbortError") setErr(e.message);
       else patchLast((m) => ({ ...m, text: m.text || "(중단됨)" }));
     } finally {
+      patchLast((m) => (m.role === "assistant" && !m.end ? { ...m, end: Date.now() } : m)); // 끝난 시각 (중단·오류 포함)
       setBusy(false);
       abortRef.current = null;
       runIdRef.current = null;
@@ -239,6 +253,7 @@ export default function App() {
             <div className="text">
               {m.text ? <Rich text={m.text} /> : busy && i === msgs.length - 1 ? <span className="dots">생성 중…</span> : ""}
             </div>
+            {m.start && <div className="meta"><Elapsed start={m.start} end={m.end} />{m.step ? ` · ${m.step}단계` : ""}</div>}
             {m.files?.length > 0 && (
               <div className="files">
                 {/* 그림은 가로로 나란히 작은 카드로, 누르면 크게 */}

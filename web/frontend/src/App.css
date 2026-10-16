@@ -33,6 +33,7 @@ details { margin-bottom: 6px; font-size: 13px; color: var(--dim); }
 summary { cursor: pointer; user-select: none; }
 pre { background: var(--code); border-radius: 8px; padding: 10px; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 12.5px/1.45 ui-monospace, Consolas, monospace; margin: 6px 0 0; }
 .dots { color: var(--dim); }
+.meta { font-size: 12px; color: var(--dim); margin-top: 4px; padding-left: 4px; font-variant-numeric: tabular-nums; }
 .text pre { margin: 8px 0; color: var(--text); }
 .code { margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .code pre { margin: 0; border-radius: 0; }
