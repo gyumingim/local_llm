@@ -1,0 +1,69 @@
+{
+  "name": "local-agent",
+  "displayName": "Local Agent",
+  "description": "codeact 기반 로컬 LLM 코딩 에이전트 (Ollama + Qwen3.6-35B)",
+  "version": "0.0.1",
+  "publisher": "local",
+  "license": "MIT",
+  "keywords": ["ai", "coding", "local-llm", "ollama", "qwen", "codeact", "agent", "chat"],
+  "galleryBanner": { "color": "#1e1e1e", "theme": "dark" },
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "localAgent", "title": "Local Agent", "icon": "robot.svg" }
+      ]
+    },
+    "views": {
+      "localAgent": [
+        { "type": "webview", "id": "localAgent.chat", "name": "채팅" }
+      ]
+    },
+    "commands": [
+      { "command": "localAgent.openInEditor", "title": "넓게 열기 (에디터 탭)", "category": "Local Agent", "icon": "$(split-horizontal)" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "localAgent.openInEditor", "when": "view == localAgent.chat", "group": "navigation" }
+      ]
+    },
+    "configuration": {
+      "title": "Local Agent",
+      "properties": {
+        "localAgent.codeactPath": {
+          "type": "string",
+          "default": "",
+          "description": "codeact_agent.py 절대경로 (비우면 확장에 번들된 파일을 자동 사용)"
+        },
+        "localAgent.ollamaHost": {
+          "type": "string",
+          "default": "http://100.126.163.103:11434",
+          "description": "Ollama 서버 주소 (로컬이면 http://localhost:11434)"
+        },
+        "localAgent.model": {
+          "type": "string",
+          "default": "hf.co/unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q2_K_XL",
+          "description": "사용할 Ollama 모델 (빠름=UD-Q2_K_XL, 정확=UD-Q3_K_M)"
+        },
+        "localAgent.timeoutMinutes": {
+          "type": "number",
+          "default": 60,
+          "description": "작업 최대 시간(분). 초과 시 중단"
+        },
+        "localAgent.autoProjectMap": {
+          "type": "boolean",
+          "default": true,
+          "description": "워크스페이스를 열면 PROJECT_MAP.md(구조 압축)를 자동 생성해 프로젝트 파악을 빠르게"
+        },
+        "localAgent.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python 실행 파일"
+        }
+      }
+    }
+  }
+}

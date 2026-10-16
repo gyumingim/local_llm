@@ -7,7 +7,7 @@ Python ast로 함수/클래스 추출 -> nomic-embed-text 임베딩 -> 의미 �
 """
 import ast, os, json, math, sys, urllib.request
 
-OLLAMA_EMB = "http://localhost:11434/api/embeddings"
+OLLAMA_EMB = (os.environ.get("OLLAMA_HOST") or "http://localhost:11434").rstrip("/") + "/api/embeddings"  # karma 등 원격 지원
 BASE = os.path.dirname(os.path.abspath(__file__))
 INDEX_FILE = os.path.join(BASE, "code_index.json")
 

@@ -30,6 +30,24 @@ export OLLAMA_KV_CACHE_TYPE=q8_0
 ```
 → VRAM 오프로드 감소, 긴 context 메모리 절반. (근본 속도 한계는 모델 크기 vs VRAM)
 
+## 1.6 듀얼 머신 — 다른 GPU에서 LLM 전담 (경합 회피)
+이 컴에서 Isaac Sim/게임 등 무거운 GPU 작업을 같이 돌리면 LLM과 VRAM 경합해서 느려집니다.
+tailscale로 연결된 **다른 컴(예: 4060)에 LLM을 전담**시키면 경합이 사라집니다.
+(⚠️ tailscale 너머 tensor-parallel로 두 GPU를 묶는 건 대역폭 병목이라 비추 — 역할 분리가 정답)
+
+```bash
+# LLM 담당 컴(예: 4060, 8GB)에서: Ollama가 원격 접속 받게 노출 + 모델 설치
+#   OLLAMA_HOST=0.0.0.0:11434 로 serve (systemd 환경변수 또는 실행 시)
+ollama pull qwen2.5-coder:7b     # 8GB에 fit하는 코딩 특화 (30B는 8GB엔 안 들어감)
+
+# 개발 컴에서: codeact가 원격 LLM 컴을 가리키게
+export OLLAMA_HOST=http://<타컴_tailscale_IP>:11434
+export AGENT_MODEL=qwen2.5-coder:7b
+python agent/codeact_agent.py "태스크"
+```
+- Isaac Sim 등을 **안 돌릴 땐** `OLLAMA_HOST`를 빼면 이 컴의 30B(최고품질)를 그대로 씁니다.
+- Kilo도 Providers → Base URL을 `http://<타컴_IP>:11434/v1`, Model `qwen2.5-coder:7b`로 바꾸면 됨.
+
 ## 2. 에이전트 실행
 ```bash
 # 권장: CodeAct 방식 (행동=python 코드, 파싱문제 없음)

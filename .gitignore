@@ -17,3 +17,6 @@ finetune/model_ft/
 
 # 압축 메모리(재생성 가능)
 PROJECT_MAP.md
+
+web/frontend/node_modules/
+web/frontend/dist/
