@@ -81,6 +81,41 @@ def _get_weather(city):
         return f"weather error: {e}"
 
 
+def _image_search(query, k=3):
+    """namespace에 주입 — 이미지 검색(SearXNG) 후 workspace/images/ 에 내려받음. 내려받은 그림은 웹 화면에 자동으로 보인다"""
+    import urllib.parse
+    try:
+        url = SEARXNG + "?" + urllib.parse.urlencode({"q": query, "format": "json", "categories": "images"})
+        with urllib.request.urlopen(url, timeout=20) as r:
+            results = json.load(r).get("results", [])
+    except Exception as e:
+        return f"image_search error: {e}"
+    os.makedirs("images", exist_ok=True)
+    stem = re.sub(r"[^\w-]", "_", query)[:30] or "image"
+    got = []
+    for x in results:
+        if len(got) >= k:
+            break
+        src = x.get("img_src") or ""
+        if not src.startswith("http") or src.lower().split("?")[0].endswith(".svg"):
+            continue
+        try:
+            req = urllib.request.Request(src, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                ctype = r.headers.get_content_type()
+                data = r.read(15 * 1024 * 1024)
+            if not ctype.startswith("image/") or ctype == "image/svg+xml" or len(data) < 5000:
+                continue  # 아이콘·깨진 링크 건너뜀
+            ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}.get(ctype, ".jpg")
+            path = f"images/{stem}_{len(got) + 1}{ext}"
+            with open(path, "wb") as fh:
+                fh.write(data)
+            got.append({"path": path, "title": x.get("title"), "source": x.get("url")})
+        except Exception:
+            continue
+    return got or "image_search: 내려받을 수 있는 이미지를 못 찾음 — 검색어를 바꿔 보라"
+
+
 VISION_MODEL = os.environ.get("VISION_MODEL") or "qwen2.5vl:7b"
 
 
@@ -170,6 +205,8 @@ def _detect_action(code):
         return "✏️ 파일 작성"
     if "run_py" in code:
         return "▶ 실행"
+    if "image_search" in code:
+        return "🔎 이미지 검색"
     if "see_image" in code:
         return "🖼 이미지 읽기"
     if "get_weather" in code:
@@ -206,6 +243,7 @@ Rules:
 Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG. 스니펫이 부족하면 fetch_url 로 본문을 읽어라
 - fetch_url(url) -> 웹 페이지 본문 텍스트 (앞 3000자)
+- image_search(query, k=3) -> 이미지를 찾아 workspace/images/ 에 내려받고 [{path, title, source}] 를 돌려줌. 내려받은 그림은 사용자 화면에 자동으로 보인다. "~ 이미지/사진 찾아줘" 는 사이트 링크를 주지 말고 이것을 써라. 답에는 각 그림의 출처 [제목](source) 를 적어라
 - see_image(path, question) -> 이미지 내용을 글로 (비전 모델). 사용자가 이미지를 첨부하면 이것으로 먼저 읽고 답하라. 질문을 구체적으로 넘겨라
 - 그림·그래프를 만들어 달라면 matplotlib 등으로 workspace 에 .png 로 저장하라 (plt.savefig('chart.png')) — 저장한 이미지는 사용자 화면에 자동으로 보인다. plt.show() 금지
 - 웹에서 찾은 자료·출처를 답에 적을 때는 반드시 각 항목에 web_search 결과의 실제 url 을 함께 써라. 형식: [제목](https://...) — 링크 없는 자료 목록 금지, url 을 지어내지 말 것
@@ -355,7 +393,7 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
     if WORKSPACE not in sys.path:
         sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
-    ns = {"__name__": "__agent__", "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image,
+    ns = {"__name__": "__agent__", "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search,
           "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py,
           "search_codebase": _search_codebase, "grep_code": _grep_code}
     _sk = _load_skills()
