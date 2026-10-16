@@ -207,20 +207,24 @@ export default function App() {
             </div>
             {m.files?.length > 0 && (
               <div className="files">
-                {m.files.map((f) =>
-                  f.image || IMG_RE.test(f.path) ? (
-                    <figure key={f.path}>
-                      {/* 같은 이름으로 다시 그린 그림도 새로 보이게 메시지 번호를 붙임 */}
-                      <img src={`${fileUrl(f.path)}&v=${i}`} alt={f.path} onClick={() => setZoom(`${fileUrl(f.path)}&v=${i}`)} />
-                      <figcaption>🖼 {f.path}</figcaption>
-                    </figure>
-                  ) : (
-                    <details key={f.path}>
-                      <summary>📄 {f.path}</summary>
-                      <pre>{f.content}</pre>
-                    </details>
-                  )
-                )}
+                {/* 그림은 가로로 나란히 작은 카드로, 누르면 크게 */}
+                <div className="gallery">
+                  {m.files.filter((f) => f.image || IMG_RE.test(f.path)).map((f) => {
+                    const src = `${fileUrl(f.path)}&v=${i}`; // 같은 이름으로 다시 그린 그림도 새로 보이게
+                    return (
+                      <figure key={f.path} onClick={() => setZoom(src)} title={f.path}>
+                        <img src={src} alt={f.path} loading="lazy" />
+                        <figcaption>{f.path.split("/").pop()}</figcaption>
+                      </figure>
+                    );
+                  })}
+                </div>
+                {m.files.filter((f) => !(f.image || IMG_RE.test(f.path))).map((f) => (
+                  <details key={f.path}>
+                    <summary>📄 {f.path}</summary>
+                    <pre>{f.content}</pre>
+                  </details>
+                ))}
               </div>
             )}
           </div>

@@ -47,10 +47,13 @@ button.clip { padding: 7px 10px; font-size: 17px; }
 .pend img { height: 64px; border-radius: 8px; border: 1px solid var(--border); display: block; }
 .pend button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; padding: 0; border-radius: 50%; background: var(--err); font-size: 13px; line-height: 20px; }
 .thumbs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 6px; }
-.thumbs img { max-height: 160px; max-width: 100%; border-radius: 10px; cursor: zoom-in; }
-figure { margin: 8px 0; }
-figure img { max-width: 100%; max-height: 420px; border-radius: 10px; border: 1px solid var(--border); background: #fff; cursor: zoom-in; display: block; }
-figcaption { font-size: 12.5px; color: var(--dim); margin-top: 4px; }
+.thumbs img { max-height: 120px; max-width: 100%; border-radius: 10px; cursor: zoom-in; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin: 8px 0; }
+.gallery:empty { display: none; }
+.gallery figure { margin: 0; cursor: zoom-in; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #fff; transition: transform .15s; }
+.gallery figure:hover img { transform: scale(1.03); }
+.gallery figcaption { font-size: 12px; color: var(--dim); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: flex; align-items: center; justify-content: center; cursor: zoom-out; z-index: 10; }
 .zoom img { max-width: 95vw; max-height: 95vh; border-radius: 8px; }
 .dropzone { position: fixed; inset: 12px; border: 3px dashed var(--accent); border-radius: 16px; background: color-mix(in srgb, var(--bg) 85%, transparent); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--accent); pointer-events: none; z-index: 9; }
