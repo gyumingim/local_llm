@@ -40,12 +40,44 @@ function Linkify({ text }) {
   return out;
 }
 
+const EXT = { python: "py", py: "py", javascript: "js", js: "js", typescript: "ts", html: "html", css: "css",
+  json: "json", bash: "sh", sh: "sh", powershell: "ps1", sql: "sql", java: "java", c: "c", cpp: "cpp", "": "py" };
+
+// 답 안의 코드 상자 — 복사 · 파일로 저장 버튼
+function CodeBlock({ lang, code }) {
+  const [copied, setCopied] = useState(false);
+  const save = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([code + "\n"], { type: "text/plain;charset=utf-8" }));
+    a.download = `code.${EXT[lang.toLowerCase()] || "txt"}`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  return (
+    <div className="code">
+      <div className="code-bar">
+        <span>{lang || "python"}</span>
+        <button onClick={() => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
+          {copied ? "복사됨" : "복사"}
+        </button>
+        <button onClick={save}>⬇ 저장</button>
+      </div>
+      <pre>{code}</pre>
+    </div>
+  );
+}
+
 // ```코드``` 부분만 코드 상자로, 나머지는 링크를 살린 글
 function Rich({ text }) {
-  return text.split(/```(?:\w+)?\n?([\s\S]*?)(?:```|$)/).map((part, i) =>
+  const parts = text.split(/```([\w+-]*)[^\n]*\n?([\s\S]*?)(?:```|$)/); // [글, 언어, 코드, 글, 언어, 코드, ...]
+  const out = [];
+  for (let i = 0; i < parts.length; i += 3) {
+    if (parts[i]) out.push(<span key={i}><Linkify text={parts[i]} /></span>);
+    const code = parts[i + 2]?.trimEnd();
     // 빈 코드 블록(답 끝의 ``` 등)은 회색 빈 상자로 남지 않게 뺀다
-    i % 2 ? part.trim() && <pre key={i}>{part.trimEnd()}</pre> : part && <span key={i}><Linkify text={part} /></span>
-  );
+    if (code?.trim()) out.push(<CodeBlock key={i + 2} lang={parts[i + 1] || ""} code={code} />);
+  }
+  return out;
 }
 
 const IMG_RE = /\.(png|jpe?g|gif|webp|bmp)$/i;

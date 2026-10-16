@@ -248,6 +248,7 @@ Helpers already available (call directly, no import needed):
 - image_search(query, k=3) -> 이미지를 찾아 workspace/images/ 에 내려받고 [{path, title, source}] 를 돌려줌. 내려받은 그림은 사용자 화면에 자동으로 보인다. "~ 이미지/사진 찾아줘" 는 사이트 링크를 주지 말고 이것을 써라. 답에는 각 그림의 출처 [제목](source) 를 적어라
 - see_image(path, question) -> 이미지 내용을 글로 (비전 모델). 사용자가 이미지를 첨부하면 이것으로 먼저 읽고 답하라. 질문을 구체적으로 넘겨라
 - 그림·그래프를 만들어 달라면 matplotlib 등으로 workspace 에 .png 로 저장하라 (plt.savefig('chart.png')) — 저장한 이미지는 사용자 화면에 자동으로 보인다. plt.show() 금지
+- 프로그램·코드를 만들어 달라는 요청은 아무리 짧아도 반드시 .py 등 파일로 workspace 에 저장하고(open(path,'w')), run_py(path) 로 실행해 확인한 뒤 FINAL 하라. 저장한 파일은 사용자가 화면에서 내려받는다. FINAL 에는 파일 이름을 적어라
 - 웹에서 찾은 자료·출처를 답에 적을 때는 반드시 각 항목에 web_search 결과의 실제 url 을 함께 써라. 형식: [제목](https://...) — 링크 없는 자료 목록 금지, url 을 지어내지 말 것
 - get_weather(city) -> 실시간 날씨 + 3일 예보. city 는 반드시 영어 이름 (서울→'Seoul', 부산→'Busan'). 날씨 질문엔 web_search 말고 이것을 써라
 - save_skill(name, code_string) -> save reusable code for later
@@ -304,6 +305,8 @@ def call_ollama(messages):
 
 def extract_code(text):
     # 한 응답에 여러 코드 블록이 있으면 모두 연결해 실행 (멀티파일 한 번에 작성 대응)
+    # FINAL: 뒤의 코드 블록은 사용자에게 보여 주는 답의 일부 → 실행하지 않음 (같은 print 가 두 번 돌던 버그)
+    text = text.split("FINAL:")[0]
     blocks = re.findall(r"```(?:python)?\s*\n(.*?)```", text, re.DOTALL)
     return "\n".join(blocks) if blocks else None
 
@@ -453,7 +456,7 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
         if not code:
             messages.append({"role": "user", "content": "Observation: no code block found. Write a ```python block or FINAL:."})
             continue
-        if is_print_only(code):
+        if is_print_only(code) and not early_final:
             # 고정 문장만 print = 사용자에게 하는 말 → 그 출력을 답으로 바로 끝냄 (같은 인사를 단계마다 반복하던 루프 방지)
             ans = execute(code, ns).strip()
             print("FINAL: " + ans.replace("\n", " "))
