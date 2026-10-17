@@ -2,6 +2,8 @@
 
 Python 3.10+ 와 [Ollama](https://ollama.com)만 있으면 됩니다. (에이전트는 표준 라이브러리만 사용, 의존성 설치 불필요)
 
+> 단계별 체크리스트·내 GPU에 맞는 명령은 **[setup.html](setup.html)** (브라우저로 열기). 이 파일은 명령 모음입니다.
+
 ## 1. Ollama 설치 + 모델
 ```bash
 # Ollama 설치: https://ollama.com (Windows/Mac/Linux)
