@@ -6,7 +6,9 @@ CodeAct 에이전트 — 개선판 (mini-swe-agent / smolagents 교훈 반영)
 - 파일 생성/편집/실행/테스트 전부 python 코드로. persistent 세션(변수 유지), cwd=workspace.
 실행: python agent/codeact_agent.py "태스크"
 """
-import io, sys, os, re, json, threading, contextlib, traceback, urllib.request
+import io, sys, os, re, json, threading, contextlib, traceback, urllib.request, warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)  # python-hwpx 등의 경고가 관찰 결과를 어지럽히지 않게
+from file_tools import read_file as _read_file, make_pdf as _make_pdf  # 여러 형식 파일 읽기·PDF 만들기 (같은 폴더)
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows cp949 콘솔 유니코드 출력 크래시 방지
 except Exception:
@@ -300,7 +302,15 @@ Helpers already available (call directly, no import needed):
 - image_search(query, k=3) -> 이미지를 찾아 workspace/images/ 에 내려받고 [{path, title, source, desc}] 를 돌려줌 (비전 모델이 검색어와 안 맞는 그림은 걸러 냄). 내려받은 그림은 사용자 화면에 자동으로 보인다. "~ 이미지/사진 찾아줘" 는 사이트 링크를 주지 말고 이것을 써라. 답에는 각 그림의 desc 와 출처 [제목](source) 를 적고, 그림 파일 경로·![]() 는 적지 마라
 - remember(fact) -> 사용자에 대해 계속 기억할 사실 저장 (다음 대화부터 자동 반영). 사용자가 "기억해"라고 하거나 이름·선호·환경처럼 계속 쓸 정보를 알려 주면 써라
 - 웹페이지·게임·계산기 화면 등 브라우저에서 보는 결과물을 원하면 CSS·JS 를 모두 넣은 단일 .html 파일로 저장하라 (외부 파일·CDN 없이) — 사용자 화면 오른쪽 미리보기 창에서 바로 실행된다
-- 첨부 파일은 uploads/ 에 있다: .csv/.xlsx → pandas (pd.read_csv / pd.read_excel), .pdf → from pypdf import PdfReader (또는 fitz), .txt/.md/.json → open(). 먼저 내용을 읽어 보고 답하라
+- read_file(path) -> 어떤 형식이든 글로 읽기: txt·md·csv·tsv·json·코드, pdf, docx, pptx, xlsx·xls, 한글 hwp·hwpx. 첨부 파일(uploads/)은 먼저 이걸로 읽고 답하라
+- 파일 만들기·고치기 (결과 파일은 사용자가 화면에서 내려받는다. 원본 첨부는 덮어쓰지 말고 새 이름으로 저장):
+  · 한글 .hwpx: from hwpx import HwpxDocument as H; d=H.new(); d.add_heading("제목",1); d.add_paragraph("본문"); t=d.add_table(2,3); t.cell(0,0).text="칸"; d.save_to_path("out.hwpx")
+    고치기: d=H.open("uploads/x.hwpx" 또는 "uploads/x.hwp"); d.text.replace("옛 글","새 글"); d.save_to_path("x_수정.hwpx")  — .hwp 는 읽기만 되고 저장은 .hwpx 로 (한글 2014 이상에서 열림)
+  · Word .docx: import docx; d=docx.Document() 또는 docx.Document(path); d.add_heading/add_paragraph/add_table; 문단 고치기는 d.paragraphs[i].text=...; d.save("out.docx")
+  · 엑셀 .xlsx: pandas df.to_excel("out.xlsx", index=False) 또는 openpyxl.load_workbook(path) → ws["A1"]="값" → wb.save("out.xlsx")
+  · 파워포인트 .pptx: from pptx import Presentation; p=Presentation(); s=p.slides.add_slide(p.slide_layouts[1]); s.shapes.title.text=...; s.placeholders[1].text=...; p.save("out.pptx")
+  · PDF: make_pdf("out.pdf", text, title="제목") (한글 글꼴 자동). PDF 고치기·합치기는 import fitz (PyMuPDF)
+  · csv: df.to_csv("out.csv", index=False, encoding="utf-8-sig") (엑셀에서 한글 안 깨지게)
 - see_image(path, question) -> 이미지 내용을 글로 (비전 모델). 사용자가 이미지를 첨부하면 이것으로 먼저 읽고 답하라. 질문을 구체적으로 넘겨라
 - 그림·그래프를 만들어 달라면 matplotlib 등으로 workspace 에 .png 로 저장하라 (plt.savefig('chart.png')) — 저장한 이미지는 사용자 화면에 자동으로 보인다. plt.show() 금지
 - 프로그램·코드를 만들어 달라는 요청은 아무리 짧아도 반드시 .py 등 파일로 workspace 에 저장하고(open(path,'w')), run_py(path) 로 실행해 확인한 뒤 FINAL 하라. 저장한 파일은 사용자가 화면에서 내려받는다. FINAL 에는 파일 이름을 적어라
@@ -471,7 +481,7 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
     if WORKSPACE not in sys.path:
         sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
-    ns = {"__name__": "__agent__", "open": _open_utf8, "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search, "remember": _remember,
+    ns = {"__name__": "__agent__", "open": _open_utf8, "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search, "remember": _remember, "read_file": _read_file, "make_pdf": _make_pdf,
           "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py,
           "search_codebase": _search_codebase, "grep_code": _grep_code}
     _sk = _load_skills()

@@ -347,3 +347,94 @@ a { color: inherit; }
   .lb-nav { top: auto; bottom: 70px; transform: none; }
   .user-actions { opacity: 1; }
 }
+
+/* ── 코드 색 (highlight.js) — 밝은/어두운 화면 모두 ── */
+:root { --hl-kw: #a2402b; --hl-str: #2f7a3d; --hl-num: #9a5b00; --hl-com: #8d8b83; --hl-fn: #3657b5; --hl-type: #7a3fa3; --hl-attr: #8a5a1a; }
+@media (prefers-color-scheme: dark) {
+  :root { --hl-kw: #f08d6c; --hl-str: #9fd28a; --hl-num: #e8b96a; --hl-com: #85837b; --hl-fn: #8fb2ff; --hl-type: #d1a3f0; --hl-attr: #e6c07b; }
+}
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-literal, .hljs-meta .hljs-keyword { color: var(--hl-kw); }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-template-tag { color: var(--hl-str); }
+.hljs-number, .hljs-symbol, .hljs-bullet { color: var(--hl-num); }
+.hljs-comment, .hljs-quote, .hljs-meta, .hljs-deletion { color: var(--hl-com); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-section { color: var(--hl-fn); }
+.hljs-type, .hljs-class .hljs-title, .hljs-title.class_, .hljs-variable.language_ { color: var(--hl-type); }
+.hljs-attr, .hljs-attribute, .hljs-name, .hljs-tag, .hljs-property, .hljs-params { color: var(--hl-attr); }
+
+/* ── 수식 ── */
+.prose .katex { font-size: 1.05em; }
+.prose .katex-display { margin: 10px 0 16px; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
+/* ── 사이드바: 프로젝트 · 검색 · 대화 항목 ── */
+.proj-row { display: flex; align-items: center; gap: 6px; margin: 0 10px 8px; padding: 2px 4px 2px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.proj-ico { display: inline-flex; color: var(--dim); }
+.proj-row select { flex: 1; min-width: 0; border: 0; background: transparent; padding: 6px 2px; font-size: 13.5px; outline: 0; }
+.search { display: flex; align-items: center; gap: 6px; margin: 0 10px 10px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--hover); color: var(--dim); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 7px 0; font-size: 13.5px; color: var(--text); }
+.search .icon-btn { padding: 3px; }
+.side-label { padding: 8px 12px 4px; }
+.conv { position: relative; }
+.conv-title { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.pin-mark { display: inline-flex; color: var(--accent); margin-right: 2px; }
+.conv-btns { display: none; gap: 0; }
+.conv:hover .conv-btns, .conv.on .conv-btns { display: inline-flex; }
+.conv-btns .icon-btn { padding: 3px; }
+.conv .rename { flex: 1; min-width: 0; border: 1px solid var(--border-strong); border-radius: 6px; padding: 3px 6px; background: var(--surface); outline: 0; font-size: 13.5px; }
+
+/* ── 위쪽 바 · 입력창 추가 ── */
+.topbar .title { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.proj-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--accent); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px 2px 6px; flex: none; }
+.style-sel { border: 0; background: transparent; color: var(--dim); font-size: 12.5px; padding: 4px 4px; border-radius: 8px; }
+.style-sel:hover { background: var(--hover); color: var(--text); }
+.icon-btn.round.rec { color: #fff; background: var(--err); border-color: var(--err); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.6; } }
+.file-ico.pasted { color: var(--text2); }
+
+/* ── 버전 넘기기 · 평가 ── */
+.vnav { display: inline-flex; align-items: center; gap: 0; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.vnav .icon-btn { padding: 4px; }
+.user-actions.show { opacity: 1; }
+.actions .icon-btn.on { color: var(--accent); }
+.user-file { font: inherit; color: inherit; cursor: pointer; }
+.user-file:hover { border-color: var(--border-strong); }
+
+/* ── 결과물 창 추가 ── */
+.ver-select { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 12.5px; padding: 4px 6px; margin-right: 4px; }
+.art-empty { flex: 1; display: grid; place-items: center; color: var(--dim); font-size: 14px; }
+.art-img { flex: 1; display: grid; place-items: center; overflow: auto; background: var(--code-bg); }
+.art-img img { max-width: 100%; max-height: 100%; }
+.art-text { flex: 1; margin: 0; padding: 18px 22px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 14px/1.7 var(--sans); color: var(--text); }
+.err-text { color: var(--err); font-family: var(--mono); font-size: 13px; }
+.art-table-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sheet-tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.sheet-tabs button { border: 1px solid var(--border); background: transparent; border-radius: 8px; padding: 3px 10px; font-size: 12.5px; color: var(--dim); white-space: nowrap; }
+.sheet-tabs button.on { background: var(--user-bubble); color: var(--text); font-weight: 600; }
+.art-table { flex: 1; overflow: auto; }
+.art-table table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.art-table th, .art-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 5px 10px; text-align: left; white-space: nowrap; }
+.art-table th { position: sticky; top: 0; background: var(--code-bg); font-weight: 600; }
+.art-table td:first-child, .art-table th:first-child { color: var(--faint); text-align: right; }
+.hint.pad { padding: 10px; }
+
+/* ── 창 버튼 ── */
+.btn.danger { background: transparent; color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 40%, transparent); }
+.ins.one { resize: none; }
+.btn.add-file { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
+.err.left { text-align: left; margin: 8px 0 0; }
+.modal-row.bottom { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border); }
+.mem .file-ico.sm { margin-right: 2px; }
+
+/* ── 좁은 입력창 (결과물 창이 열렸을 때 등) ── */
+.composer { container-type: inline-size; }
+.composer-row > * { flex-shrink: 0; }
+.composer-row .model { flex-shrink: 1; min-width: 0; text-overflow: ellipsis; }
+.ins-badge { white-space: nowrap; }
+@container (max-width: 560px) {
+  .ins-badge { display: none; }
+  .composer-row .model { max-width: 150px; }
+}
+@container (max-width: 420px) {
+  .style-sel { max-width: 74px; }
+  .composer-row .model { max-width: 110px; }
+}
+.conv .pin-mark, .conv .conv-btns { flex: none; }

@@ -159,7 +159,7 @@
   <section class="step" data-step="5">
     <div class="step-head"><div class="num">5</div><h2>백엔드 켜기 (터미널 1)</h2><label class="check"><input type="checkbox"><span>완료</span></label></div>
     <div class="cmd" data-cmd="backend"></div>
-    <p class="why"><code>Uvicorn running on http://127.0.0.1:8010</code> 이 보이면 성공. 이 터미널은 켜 둡니다. <code>matplotlib</code> 은 그래프 그리기용입니다.</p>
+    <p class="why"><code>Uvicorn running on http://127.0.0.1:8010</code> 이 보이면 성공. 이 터미널은 켜 둡니다. <code>requirements.txt</code> 에 그래프(matplotlib)·엑셀·PDF·Word·파워포인트·한글(python-hwpx) 도구가 함께 들어 있습니다.</p>
     <h3>확인 — 모델 이름이 보여야 합니다</h3>
     <div class="cmd" data-cmd="backtest"></div>
   </section>
@@ -210,7 +210,7 @@
     <p>명령줄 실행의 기본 Ollama 주소는 개발자의 다른 PC 로 되어 있습니다. 주소와 모델을 지정하세요.</p>
     <div class="cmd" data-cmd="cli"></div></details>
   <details><summary>그래프를 그려 달라고 했는데 그림이 안 나옴</summary>
-    <p><code>pip install matplotlib</code> 후 백엔드를 다시 켭니다.</p></details>
+    <p><code>pip install -r requirements.txt</code> (web/backend 폴더) 후 백엔드를 다시 켭니다. 한글·Word·엑셀 파일을 못 읽을 때도 같습니다.</p></details>
 
   <div class="note warn" style="margin-top:24px"><b>보안:</b> 에이전트는 이 PC 에서 실제로 파이썬 코드를 실행합니다(삭제·시스템 명령은 차단). 웹 UI 는 내 PC(<code>localhost</code>)에서만 열리게 되어 있으니 다른 사람에게 주소를 열어 주지 마세요.</div>
 
@@ -248,8 +248,8 @@ function cmds(os, vram) {
                 : `curl -s "http://localhost:8888/search?q=test&format=json" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['results']))"` },
     backend: { cap: "local_llm 폴더에서",
       code: win
-        ? `cd web\\backend\npip install -r requirements.txt matplotlib\n${custom ? `$env:WEB_MODELS = "${agent}"\n` : ""}python -m uvicorn main:app --port 8010`
-        : `cd web/backend\npython3 -m pip install -r requirements.txt matplotlib\n${custom ? `WEB_MODELS=${agent} ` : ""}python3 -m uvicorn main:app --port 8010` },
+        ? `cd web\\backend\npip install -r requirements.txt\n${custom ? `$env:WEB_MODELS = "${agent}"\n` : ""}python -m uvicorn main:app --port 8010`
+        : `cd web/backend\npython3 -m pip install -r requirements.txt\n${custom ? `WEB_MODELS=${agent} ` : ""}python3 -m uvicorn main:app --port 8010` },
     backtest: { code: win ? `Invoke-RestMethod http://localhost:8010/api/models` : `curl http://localhost:8010/api/models` },
     frontend: { cap: "새 터미널, local_llm 폴더에서",
       code: `cd web${win ? "\\" : "/"}frontend\nnpm install\nnpm run dev` },

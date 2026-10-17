@@ -33,7 +33,11 @@ os.makedirs(WORKSPACE, exist_ok=True)
 # 웹에서 쓸 수 있는 모델 = 우리가 만든 커스텀 모델만 (SETUP.md 의 ollama create). 쉼표로 여러 개 지정 가능
 ALLOWED = [m.strip() for m in os.environ.get("WEB_MODELS", "qwen3-coder-cline:30b").split(",") if m.strip()]
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")
-DOC_EXT = (".pdf", ".csv", ".xlsx", ".xls", ".txt", ".md", ".json", ".py", ".js", ".html", ".log", ".tsv", ".xml", ".yaml", ".yml")
+DOC_EXT = (".pdf", ".csv", ".tsv", ".xlsx", ".xls", ".docx", ".pptx", ".hwp", ".hwpx", ".txt", ".md", ".json",
+           ".py", ".js", ".ts", ".html", ".css", ".log", ".xml", ".yaml", ".yml", ".sql")
+FEEDBACK_FILE = os.path.join(ROOT, "agent", "feedback.jsonl")  # 답 평가 (좋아요·싫어요) — 나중에 모델 개선 자료
+sys.path.insert(0, os.path.join(ROOT, "agent"))
+import file_tools  # noqa: E402  여러 형식 미리보기 (에이전트와 같은 코드)
 MAX_UPLOAD = 20 * 1024 * 1024
 
 app = FastAPI(title="local_llm web")
@@ -99,7 +103,8 @@ class AgentReq(BaseModel):
     task: str
     history: str = ""
     images: list[str] = []  # /api/upload 가 돌려준 workspace 상대 경로 (이미지)
-    files: list[str] = []   # 같은 방식의 문서 첨부 (pdf·csv·xlsx·txt …)
+    files: list[str] = []   # 같은 방식의 문서 첨부 (pdf·csv·xlsx·docx·hwp …)
+    knowledge: list[str] = []  # 프로젝트 자료 (필요할 때 읽을 참고 파일)
     instructions: str = ""  # 설정 화면의 사용자 지침
 
 
@@ -151,6 +156,26 @@ def get_file(path: str, download: bool = False):
     return FileResponse(p, filename=os.path.basename(p) if download else None)
 
 
+@app.get("/api/preview")
+def get_preview(path: str):
+    """결과물 창 미리보기 — 표(csv·xlsx), 글(docx·pptx·hwp·코드), pdf·이미지는 종류만"""
+    return file_tools.preview(in_workspace(path))
+
+
+class FeedbackReq(BaseModel):
+    rating: int  # 1 좋아요, -1 싫어요
+    task: str = ""
+    answer: str = ""
+    model: str = ""
+
+
+@app.post("/api/feedback")
+def feedback(req: FeedbackReq):
+    with open(FEEDBACK_FILE, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps({**req.model_dump(), "at": time.strftime("%Y-%m-%d %H:%M:%S")}, ensure_ascii=False) + "\n")
+    return {"ok": True}
+
+
 @app.get("/api/memory")
 def get_memory():
     try:
@@ -180,7 +205,10 @@ def agent(req: AgentReq):
     if imgs:
         task += "\n\n[첨부 이미지 — see_image(path, question) 로 읽어라]\n" + "\n".join(imgs)
     if docs:
-        task += "\n\n[첨부 파일 — 파이썬으로 열어 내용을 읽어라]\n" + "\n".join(docs)
+        task += "\n\n[첨부 파일 — read_file(path) 로 먼저 읽어라]\n" + "\n".join(docs)
+    know = [p for p in req.knowledge if os.path.isfile(in_workspace(p))]
+    if know:
+        task += "\n\n[프로젝트 자료 — 질문과 관련 있으면 read_file(path) 로 읽어 참고하라]\n" + "\n".join(know)
     run_id = uuid.uuid4().hex[:8]
     env = {**os.environ, "AGENT_JSON": "1", "AGENT_MODEL": req.model, "AGENT_HISTORY": req.history,
            "AGENT_INSTRUCTIONS": req.instructions, "AGENT_WORKSPACE": WORKSPACE, "OLLAMA_HOST": OLLAMA_HOST,

@@ -21,3 +21,4 @@ PROJECT_MAP.md
 
 web/frontend/node_modules/
 web/frontend/dist/
+agent/feedback.jsonl

@@ -1,2 +1,12 @@
+# 웹 서버
 fastapi>=0.110
 uvicorn>=0.29
+# 에이전트가 쓰는 파일 도구 (agent/file_tools.py) — 그래프, 표, PDF, Word, 파워포인트, 한글
+matplotlib
+pandas
+openpyxl
+pypdf
+pymupdf
+python-docx
+python-pptx
+python-hwpx
