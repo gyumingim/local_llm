@@ -1,8 +1,10 @@
 # 로컬 LLM 웹 서버 (FastAPI)
 # - /api/models : Ollama 모델 목록
 # - /api/agent  : agent/codeact_agent.py 를 하위 프로세스로 실행하고 이벤트를 SSE 로 흘림 (VS Code 확장과 같은 방식)
-# - /api/upload : 이미지 첨부를 workspace/uploads 에 저장
-# - /api/file   : workspace 파일 내려주기 (이미지 미리보기)
+# - /api/upload : 첨부(이미지·문서)를 workspace/uploads 에 저장
+# - /api/file   : workspace 파일 내려주기 (미리보기·다운로드)
+# - /ws/...     : workspace 를 정적 파일로 (HTML 결과물 미리보기 — 격리된 sandbox 로만 실행)
+# - /api/memory : 에이전트가 remember() 로 저장한 기억 보기·지우기
 # - /api/stop/{run_id} : 실행 중인 에이전트 중단
 # 실행: cd web/backend && uvicorn main:app --port 8010
 import base64
@@ -16,22 +18,36 @@ import time
 import urllib.request
 import uuid
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 OLLAMA_HOST = (os.environ.get("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 CODEACT = os.path.join(ROOT, "agent", "codeact_agent.py")
+MEMORY_FILE = os.path.join(ROOT, "agent", "memory.json")  # codeact_agent.MEMORY_FILE 과 같은 파일
 WORKSPACE = os.path.abspath(os.environ.get("AGENT_WORKSPACE") or os.path.join(ROOT, "agent", "workspace"))
 UPLOADS = os.path.join(WORKSPACE, "uploads")
+os.makedirs(WORKSPACE, exist_ok=True)
 # 웹에서 쓸 수 있는 모델 = 우리가 만든 커스텀 모델만 (SETUP.md 의 ollama create). 쉼표로 여러 개 지정 가능
 ALLOWED = [m.strip() for m in os.environ.get("WEB_MODELS", "qwen3-coder-cline:30b").split(",") if m.strip()]
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")
+DOC_EXT = (".pdf", ".csv", ".xlsx", ".xls", ".txt", ".md", ".json", ".py", ".js", ".html", ".log", ".tsv", ".xml", ".yaml", ".yml")
 MAX_UPLOAD = 20 * 1024 * 1024
 
 app = FastAPI(title="local_llm web")
 RUNS: dict[str, subprocess.Popen] = {}  # 실행 중인 에이전트 (중단용)
+
+
+@app.middleware("http")
+async def sandbox_workspace(request: Request, call_next):
+    """에이전트가 만든 HTML 은 이 앱과 다른 출처(sandbox)로만 실행 — 새 탭으로 직접 열어도 /api 를 건드릴 수 없게."""
+    resp = await call_next(request)
+    if request.url.path.startswith("/ws/"):
+        resp.headers["Content-Security-Policy"] = "sandbox allow-scripts allow-forms allow-modals allow-popups allow-downloads"
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 def snapshot():
@@ -59,7 +75,7 @@ def changed_files(before):
             continue
         try:
             with open(p, encoding="utf-8") as fh:
-                content = fh.read(20000)
+                content = fh.read(60000)
         except (OSError, UnicodeDecodeError):
             content = "(텍스트 파일 아님)"
         files.append({"path": rel, "content": content})
@@ -82,7 +98,9 @@ class AgentReq(BaseModel):
     model: str
     task: str
     history: str = ""
-    images: list[str] = []  # /api/upload 가 돌려준 workspace 상대 경로
+    images: list[str] = []  # /api/upload 가 돌려준 workspace 상대 경로 (이미지)
+    files: list[str] = []   # 같은 방식의 문서 첨부 (pdf·csv·xlsx·txt …)
+    instructions: str = ""  # 설정 화면의 사용자 지침
 
 
 class UploadReq(BaseModel):
@@ -107,9 +125,9 @@ def check_model(model):
 
 @app.post("/api/upload")
 def upload(req: UploadReq):
-    stem, ext = os.path.splitext(os.path.basename(req.name) or "image.png")
-    if ext.lower() not in IMAGE_EXT:
-        raise HTTPException(400, f"이미지만 올릴 수 있음 ({', '.join(IMAGE_EXT)})")
+    stem, ext = os.path.splitext(os.path.basename(req.name) or "file")
+    if ext.lower() not in IMAGE_EXT + DOC_EXT:
+        raise HTTPException(400, f"올릴 수 없는 형식 ({ext}). 가능: {', '.join(IMAGE_EXT + DOC_EXT)}")
     try:
         raw = base64.b64decode(req.data.split(",", 1)[-1], validate=True)
     except Exception:
@@ -117,11 +135,11 @@ def upload(req: UploadReq):
     if len(raw) > MAX_UPLOAD:
         raise HTTPException(413, "20 MB 넘음")
     os.makedirs(UPLOADS, exist_ok=True)
-    stem = re.sub(r"[^\w.-]", "_", stem)[:40] or "image"
+    stem = re.sub(r"[^\w.-]", "_", stem)[:40] or "file"
     name = f"{time.strftime('%m%d_%H%M%S')}_{stem}{ext.lower()}"
     with open(os.path.join(UPLOADS, name), "wb") as fh:
         fh.write(raw)
-    return {"path": f"uploads/{name}"}
+    return {"path": f"uploads/{name}", "image": ext.lower() in IMAGE_EXT}
 
 
 @app.get("/api/file")
@@ -133,19 +151,43 @@ def get_file(path: str, download: bool = False):
     return FileResponse(p, filename=os.path.basename(p) if download else None)
 
 
+@app.get("/api/memory")
+def get_memory():
+    try:
+        with open(MEMORY_FILE, encoding="utf-8") as fh:
+            return {"items": json.load(fh)}
+    except (OSError, ValueError):
+        return {"items": []}
+
+
+@app.delete("/api/memory/{idx}")
+def delete_memory(idx: int):
+    items = get_memory()["items"]
+    if not 0 <= idx < len(items):
+        raise HTTPException(404, "없는 항목")
+    items.pop(idx)
+    with open(MEMORY_FILE, "w", encoding="utf-8") as fh:
+        json.dump(items, fh, ensure_ascii=False, indent=1)
+    return {"items": items}
+
+
 @app.post("/api/agent")
 def agent(req: AgentReq):
     check_model(req.model)
     task = req.task
     imgs = [p for p in req.images if os.path.isfile(in_workspace(p))]
+    docs = [p for p in req.files if os.path.isfile(in_workspace(p))]
     if imgs:
         task += "\n\n[첨부 이미지 — see_image(path, question) 로 읽어라]\n" + "\n".join(imgs)
+    if docs:
+        task += "\n\n[첨부 파일 — 파이썬으로 열어 내용을 읽어라]\n" + "\n".join(docs)
     run_id = uuid.uuid4().hex[:8]
     env = {**os.environ, "AGENT_JSON": "1", "AGENT_MODEL": req.model, "AGENT_HISTORY": req.history,
-           "AGENT_WORKSPACE": WORKSPACE, "OLLAMA_HOST": OLLAMA_HOST, "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1",
+           "AGENT_INSTRUCTIONS": req.instructions, "AGENT_WORKSPACE": WORKSPACE, "OLLAMA_HOST": OLLAMA_HOST,
+           "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1",
            "MPLBACKEND": "Agg", "PYTHONUTF8": "1"}  # 그림은 창 없이 파일로만
     before = snapshot()
-    proc = subprocess.Popen([sys.executable, CODEACT, task], cwd=WORKSPACE if os.path.isdir(WORKSPACE) else ROOT,
+    proc = subprocess.Popen([sys.executable, CODEACT, task], cwd=WORKSPACE,
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
     RUNS[run_id] = proc
     # 일정 시간 넘으면 강제 종료 (VS Code 확장과 같은 안전장치)
@@ -191,3 +233,7 @@ def stop(run_id: str):
         proc.kill()
         return {"stopped": True}
     return {"stopped": False}
+
+
+# 맨 끝에 마운트 (위의 /api 경로가 먼저 잡히도록)
+app.mount("/ws", StaticFiles(directory=WORKSPACE, html=True), name="workspace")

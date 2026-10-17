@@ -6,6 +6,7 @@ __pycache__/
 agent/workspace/
 agent/code_index.json
 agent/skills.json
+agent/memory.json
 
 # 임시
 *.log

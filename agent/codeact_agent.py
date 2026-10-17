@@ -32,8 +32,10 @@ def _web_search(query, k=3):
         url = SEARXNG + "?" + urllib.parse.urlencode({"q": query, "format": "json"})
         with urllib.request.urlopen(url, timeout=15) as r:
             data = json.load(r)
-        return [{"title": x.get("title"), "url": x.get("url"), "content": (x.get("content") or "")[:200]}
-                for x in data.get("results", [])[:k]]
+        res = [{"title": x.get("title"), "url": x.get("url"), "content": (x.get("content") or "")[:200]}
+               for x in data.get("results", [])[:k]]
+        emit({"t": "sources", "items": [{"title": r["title"], "url": r["url"]} for r in res if r["url"]]})  # 화면의 출처 카드
+        return res
     except Exception as e:
         return f"search error: {e}"
 
@@ -44,6 +46,8 @@ def _fetch_url(url, max_chars=3000):
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as r:
             html = r.read().decode(r.headers.get_content_charset() or "utf-8", "replace")
+        title = re.search(r"(?is)<title[^>]*>(.*?)</title>", html)
+        emit({"t": "sources", "items": [{"title": re.sub(r"\s+", " ", title.group(1)).strip()[:120] if title else url, "url": url}]})
         html = re.sub(r"(?is)<(script|style|noscript).*?</\1>", " ", html)
         text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
         return text[:max_chars]
@@ -81,8 +85,20 @@ def _get_weather(city):
         return f"weather error: {e}"
 
 
-def _image_search(query, k=3):
-    """namespace에 주입 — 이미지 검색(SearXNG) 후 workspace/images/ 에 내려받음. 내려받은 그림은 웹 화면에 자동으로 보인다"""
+def _check_image(path, query):
+    """비전 모델로 검색한 그림이 검색어와 맞는지 보고 한 줄 설명을 붙임 → (맞음?, 설명). 비전 모델이 없으면 (True, "")"""
+    ans = _see_image(path, f"이 사진이 '{query}' 에 해당하나요? 첫 줄에 YES 또는 NO 만 쓰고, 둘째 줄에 사진을 한국어 한 문장(30자 이내)으로 설명하세요.")
+    if ans.startswith("see_image error"):
+        return True, ""
+    lines = [s.strip() for s in ans.strip().splitlines() if s.strip()]
+    ok = not (lines and lines[0].upper().startswith("NO"))
+    desc = lines[1] if len(lines) > 1 else (lines[0] if lines and not lines[0].upper().startswith(("YES", "NO")) else "")
+    return ok, desc[:80]
+
+
+def _image_search(query, k=3, verify=True):
+    """namespace에 주입 — 이미지 검색(SearXNG) 후 workspace/images/ 에 내려받음. 내려받은 그림은 웹 화면에 자동으로 보인다.
+    verify=True 면 비전 모델로 검색어와 안 맞는 그림(예: '드론' 검색에 섞인 레고 로봇)은 버리고 한 줄 설명을 붙인다"""
     import urllib.parse
     try:
         url = SEARXNG + "?" + urllib.parse.urlencode({"q": query, "format": "json", "categories": "images"})
@@ -92,9 +108,9 @@ def _image_search(query, k=3):
         return f"image_search error: {e}"
     os.makedirs("images", exist_ok=True)
     stem = re.sub(r"[^\w-]", "_", query)[:30] or "image"
-    got = []
+    got, tried = [], 0
     for x in results:
-        if len(got) >= k:
+        if len(got) >= k or tried >= k + 4:  # 안 맞는 그림을 버려도 너무 오래 걸리지 않게 후보 수 제한
             break
         src = x.get("img_src") or ""
         if not src.startswith("http") or src.lower().split("?")[0].endswith(".svg"):
@@ -110,10 +126,44 @@ def _image_search(query, k=3):
             path = f"images/{stem}_{len(got) + 1}{ext}"
             with open(path, "wb") as fh:
                 fh.write(data)
-            got.append({"path": path, "title": x.get("title"), "source": x.get("url")})
+            tried += 1
+            desc = ""
+            if verify:
+                ok, desc = _check_image(path, query)
+                if not ok:
+                    os.remove(path)  # 검색어와 안 맞는 그림은 버림
+                    continue
+            item = {"path": path, "title": x.get("title"), "source": x.get("url"), "desc": desc}
+            got.append(item)
+            emit({"t": "caption", "path": path, "text": desc or (x.get("title") or "")[:80], "source": x.get("url")})
         except Exception:
             continue
+    if got:
+        emit({"t": "sources", "items": [{"title": g["title"], "url": g["source"]} for g in got if g["source"]]})
     return got or "image_search: 내려받을 수 있는 이미지를 못 찾음 — 검색어를 바꿔 보라"
+
+
+MEMORY_FILE = os.path.join(BASE, "memory.json")
+
+
+def _load_memory():
+    try:
+        return json.load(open(MEMORY_FILE, encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _remember(fact):
+    """namespace에 주입 — 사용자에 대해 계속 기억할 사실을 저장 (다음 대화부터 자동으로 프롬프트에 들어감)"""
+    mem = _load_memory()
+    fact = str(fact).strip()[:300]
+    if fact and fact not in [m["text"] for m in mem]:
+        import time
+        mem.append({"text": fact, "at": time.strftime("%Y-%m-%d")})
+        with open(MEMORY_FILE, "w", encoding="utf-8") as fh:
+            json.dump(mem[-100:], fh, ensure_ascii=False, indent=1)
+        emit({"t": "memory", "text": fact})
+    return f"기억함: {fact}"
 
 
 VISION_MODEL = os.environ.get("VISION_MODEL") or "qwen2.5vl:7b"
@@ -207,6 +257,8 @@ def _detect_action(code):
         return "✏️ 파일 작성"
     if "run_py" in code:
         return "▶ 실행"
+    if "remember(" in code:
+        return "🧠 기억 저장"
     if "image_search" in code:
         return "🔎 이미지 검색"
     if "see_image" in code:
@@ -245,7 +297,10 @@ Rules:
 Helpers already available (call directly, no import needed):
 - web_search(query) -> list of {title, url, content}   # local SearXNG. 스니펫이 부족하면 fetch_url 로 본문을 읽어라
 - fetch_url(url) -> 웹 페이지 본문 텍스트 (앞 3000자)
-- image_search(query, k=3) -> 이미지를 찾아 workspace/images/ 에 내려받고 [{path, title, source}] 를 돌려줌. 내려받은 그림은 사용자 화면에 자동으로 보인다. "~ 이미지/사진 찾아줘" 는 사이트 링크를 주지 말고 이것을 써라. 답에는 각 그림의 출처 [제목](source) 를 적어라
+- image_search(query, k=3) -> 이미지를 찾아 workspace/images/ 에 내려받고 [{path, title, source, desc}] 를 돌려줌 (비전 모델이 검색어와 안 맞는 그림은 걸러 냄). 내려받은 그림은 사용자 화면에 자동으로 보인다. "~ 이미지/사진 찾아줘" 는 사이트 링크를 주지 말고 이것을 써라. 답에는 각 그림의 desc 와 출처 [제목](source) 를 적고, 그림 파일 경로·![]() 는 적지 마라
+- remember(fact) -> 사용자에 대해 계속 기억할 사실 저장 (다음 대화부터 자동 반영). 사용자가 "기억해"라고 하거나 이름·선호·환경처럼 계속 쓸 정보를 알려 주면 써라
+- 웹페이지·게임·계산기 화면 등 브라우저에서 보는 결과물을 원하면 CSS·JS 를 모두 넣은 단일 .html 파일로 저장하라 (외부 파일·CDN 없이) — 사용자 화면 오른쪽 미리보기 창에서 바로 실행된다
+- 첨부 파일은 uploads/ 에 있다: .csv/.xlsx → pandas (pd.read_csv / pd.read_excel), .pdf → from pypdf import PdfReader (또는 fitz), .txt/.md/.json → open(). 먼저 내용을 읽어 보고 답하라
 - see_image(path, question) -> 이미지 내용을 글로 (비전 모델). 사용자가 이미지를 첨부하면 이것으로 먼저 읽고 답하라. 질문을 구체적으로 넘겨라
 - 그림·그래프를 만들어 달라면 matplotlib 등으로 workspace 에 .png 로 저장하라 (plt.savefig('chart.png')) — 저장한 이미지는 사용자 화면에 자동으로 보인다. plt.show() 금지
 - 프로그램·코드를 만들어 달라는 요청은 아무리 짧아도 반드시 .py 등 파일로 workspace 에 저장하고(open(path,'w')), run_py(path) 로 실행해 확인한 뒤 FINAL 하라. 저장한 파일은 사용자가 화면에서 내려받는다. FINAL 에는 파일 이름을 적어라
@@ -398,6 +453,7 @@ def finalize(messages, fallback):
     prompt = (f"사용자 요청: {task.strip()}\n\n[지금까지 도구로 알아낸 내용]\n{ctx}\n\n"
               "위 내용만 근거로 사용자 요청에 답하라. 코드·Thought·계획·'먼저 ~하겠습니다' 같은 말은 쓰지 말고, "
               "사용자에게 그대로 보여줄 완성된 설명 문장만 한국어로 써라. 다 못 했으면 어디까지 됐고 뭐가 남았는지 밝혀라.")
+    emit({"t": "finalizing"})  # 화면: 이 다음 토큰은 곧바로 답으로 흘려 보여 줌
     try:
         out = call_ollama([{"role": "system", "content": "너는 조사 결과를 사용자에게 설명하는 조수다. 지금은 도구가 없고 설명만 한다."},
                            {"role": "user", "content": prompt}])
@@ -406,8 +462,8 @@ def finalize(messages, fallback):
         ans = ""
     ans = re.sub(r"```.*?```", "", ans, flags=re.S)          # 코드블럭 제거
     ans = re.sub(r"(?is)^\s*thought:\s*", "", ans)            # 앞머리 Thought 라벨 제거
-    ans = (ans or fallback).replace("\n", " ").strip()
-    print("FINAL: " + ans)  # 확장이 결과로 잡도록 (JSON/일반 모드 공통)
+    ans = (ans or fallback).strip()
+    print("FINAL: " + ans.replace("\n", " "))  # 확장이 결과로 잡도록 한 줄로 (JSON/일반 모드 공통). 웹은 RESULT 의 여러 줄 답을 씀
     return ans
 
 
@@ -415,7 +471,7 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
     os.chdir(WORKSPACE)  # 파일 작업을 workspace로 격리
     if WORKSPACE not in sys.path:
         sys.path.insert(0, WORKSPACE)  # workspace 파일끼리 import 가능하게 (멀티파일 조율)
-    ns = {"__name__": "__agent__", "open": _open_utf8, "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search,
+    ns = {"__name__": "__agent__", "open": _open_utf8, "web_search": _web_search, "fetch_url": _fetch_url, "get_weather": _get_weather, "see_image": _see_image, "image_search": _image_search, "remember": _remember,
           "save_skill": _save_skill, "use_skill": _use_skill, "run_py": _run_py,
           "search_codebase": _search_codebase, "grep_code": _grep_code}
     _sk = _load_skills()
@@ -431,8 +487,14 @@ def run(task, max_steps=int(os.environ.get("AGENT_MAX_STEPS", "60"))):  # 단계
     # 파일 첨부: 확장이 AGENT_ATTACH로 첨부 파일 내용을 넘겨주면 참고 자료로 포함
     _att = os.environ.get("AGENT_ATTACH", "").strip()
     _att_block = f"[첨부 파일 — 참고 자료]\n{_att[:8000]}\n\n" if _att else ""
+    # 사용자 지침 (웹 설정 화면) — 매 요청에 붙임
+    _ins = os.environ.get("AGENT_INSTRUCTIONS", "").strip()
+    _ins_block = f"[사용자 지침 — 항상 따를 것]\n{_ins[:2000]}\n\n" if _ins else ""
+    # 기억 (remember() 로 저장한 사실) — 대화가 바뀌어도 유지
+    _mem = _load_memory()
+    _mem_block = ("[사용자에 대해 기억하는 것]\n" + "\n".join("- " + m["text"] for m in _mem[-30:]) + "\n\n") if _mem else ""
     messages = [{"role": "system", "content": SYSTEM},
-                {"role": "user", "content": f"{_hist_block}{_att_block}Task: {task}{_hint}{_pmap}"}]
+                {"role": "user", "content": f"{_ins_block}{_mem_block}{_hist_block}{_att_block}Task: {task}{_hint}{_pmap}"}]
     recent = []
     fail_streak = dup_streak = 0
     for step in range(max_steps):
